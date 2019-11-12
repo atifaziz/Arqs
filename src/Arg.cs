@@ -18,7 +18,60 @@ namespace Largs
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.Immutable;
     using System.Linq;
+
+    partial class Arg<T> : IArgBinder<T>
+    {
+        public Arg(string name, string shortName, string otherName, IParser<T> parser)
+        {
+            Name = name;
+            ShortName = shortName;
+            OtherName = otherName;
+            Parser = parser;
+        }
+
+        public string Name { get; }
+        public string ShortName { get; }
+        public string OtherName { get; }
+        public IParser<T> Parser { get; }
+
+        public T Bind(IArgSource source)
+        {
+            return source.Lookup(Name, null, null) is string s ? Parser.Parse(s) : throw new Exception();
+        }
+    }
+
+    partial class ListArg<T> : IArgBinder<ImmutableArray<T>>
+    {
+        public ListArg(Arg<T> arg) =>
+            Arg = arg;
+
+        public Arg<T> Arg { get; }
+
+        public ImmutableArray<T> Bind(IArgSource source)
+        {
+            var tokens = new List<string>();
+            while (source.Lookup(Arg.Name, null, null) is string s)
+                tokens.Add(s);
+            return ImmutableArray.CreateRange(from t in tokens select Arg.Parser.Parse(t));
+        }
+    }
+
+    static partial class Arg
+    {
+        public static IArgBinder<T> Require<T>(string name, IParser<T> parser) =>
+            ArgBinder.Create(source => source.Lookup(name, null, null) is string s ? parser.Parse(s) : throw new Exception());
+
+        public static IArgBinder<T> Optional<T>(string name, T @default, IParser<T> parser) =>
+            ArgBinder.Create(source => source.Lookup(name, null, null) is string s ? parser.Parse(s) : @default);
+
+        public static IArgBinder<T> Optional<T>(string name, IParser<T> parser) where T : class =>
+            ArgBinder.Create(source => source.Lookup(name, null, null) is string s ? parser.Parse(s) : null);
+
+        public static IArgBinder<T?> OptionalValue<T>(string name, IParser<T> parser) where T : struct =>
+            ArgBinder.Create(source => source.Lookup(name, null, null) is string s ? parser.Parse(s) : (T?)null);
+    }
 
     partial interface IArgSource
     {
