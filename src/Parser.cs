@@ -19,48 +19,64 @@ namespace Largs
     using System;
     using System.Collections.Immutable;
     using System.Globalization;
+    using System.Linq;
 
     partial interface IParser<out T>
     {
         T Parse(string text);
     }
 
-    partial interface IParser<in TOptions, out T>
+    partial interface IParser<out T, TOptions> : IParser<T>
     {
-        T Parse(string text, TOptions options);
+        TOptions Options { get; }
+        IParser<T, TOptions> WithOptions(TOptions value);
     }
 
-    partial class CulturalParserOptions
+    partial class GlobalParseOptions
     {
-        public CulturalParserOptions(IFormatProvider formatProvider) =>
+        public GlobalParseOptions(IFormatProvider formatProvider) =>
             FormatProvider = formatProvider;
 
         public IFormatProvider FormatProvider { get; }
 
-        public CulturalParserOptions Update(IFormatProvider formatProvider) =>
-            UpdateCulturalParserOptions(formatProvider);
+        public GlobalParseOptions WithFormatProvider(IFormatProvider value) =>
+            Update(value);
 
-        protected virtual CulturalParserOptions UpdateCulturalParserOptions(IFormatProvider formatProvider) =>
-            formatProvider == FormatProvider ? this : new CulturalParserOptions(formatProvider);
+        public GlobalParseOptions Update(IFormatProvider formatProvider) =>
+            UpdateCore(formatProvider);
+
+        protected virtual GlobalParseOptions UpdateCore(IFormatProvider formatProvider) =>
+            formatProvider == FormatProvider ? this : new GlobalParseOptions(formatProvider);
     }
 
-    partial class NumberParserOptions : CulturalParserOptions
+    partial class NumberParseOptions : GlobalParseOptions
     {
-        public NumberParserOptions(NumberStyles styles, IFormatProvider formatProvider) :
+        public NumberParseOptions(NumberStyles styles, IFormatProvider formatProvider) :
             base(formatProvider) => Styles = styles;
 
-        NumberStyles Styles { get; }
+        public NumberStyles Styles { get; }
 
-        public NumberParserOptions Update(NumberStyles styles, IFormatProvider formatProvider) =>
-            new NumberParserOptions(styles, formatProvider);
+        public NumberParseOptions WithStyles(NumberStyles value) =>
+            Update(value, FormatProvider);
 
-        protected override CulturalParserOptions UpdateCulturalParserOptions(IFormatProvider formatProvider) =>
-            new NumberParserOptions(Styles, formatProvider);
+        public new NumberParseOptions WithFormatProvider(IFormatProvider value) =>
+            Update(Styles, value);
+
+        public NumberParseOptions Update(NumberStyles styles, IFormatProvider formatProvider) =>
+            UpdateCore(styles, formatProvider);
+
+        protected virtual NumberParseOptions UpdateCore(NumberStyles styles, IFormatProvider formatProvider) =>
+            new NumberParseOptions(styles, formatProvider);
+
+        protected override GlobalParseOptions UpdateCore(IFormatProvider formatProvider) =>
+            UpdateCore(Styles, formatProvider);
     }
 
-    partial class DateTimeParserOptions : CulturalParserOptions
+    partial class DateTimeParseOptions : GlobalParseOptions
     {
-        public DateTimeParserOptions(ImmutableArray<string> formats, DateTimeStyles styles,
+        string[] _cachedFormatsArray;
+
+        public DateTimeParseOptions(ImmutableArray<string> formats, DateTimeStyles styles,
             IFormatProvider formatProvider) :
             base(formatProvider)
         {
@@ -68,53 +84,72 @@ namespace Largs
             Formats = formats;
         }
 
-        ImmutableArray<string> Formats { get; }
-        DateTimeStyles Styles { get; }
+        public ImmutableArray<string> Formats { get; }
 
-        public DateTimeParserOptions Update(ImmutableArray<string> formats, DateTimeStyles styles, IFormatProvider formatProvider) =>
-            new DateTimeParserOptions(formats, styles, formatProvider);
+        string[] CachedFormatsArray => _cachedFormatsArray ??= Formats.ToArray();
 
-        protected override CulturalParserOptions UpdateCulturalParserOptions(IFormatProvider formatProvider) =>
-            new DateTimeParserOptions(Formats, Styles, formatProvider);
-    }
+        public DateTimeStyles Styles { get; }
 
-    partial interface ICulturalParser<out T> : IParser<T>
-    {
-        IFormatProvider FormatProvider { get; }
-        ICulturalParser<T> WithFormatProvider(IFormatProvider value);
-    }
+        public DateTimeParseOptions WithFormats(ImmutableArray<string> value) =>
+            Update(value, Styles, FormatProvider);
 
-    partial interface INumberParser<out T> : ICulturalParser<T>
-    {
-        NumberStyles Styles { get; }
-        INumberParser<T> WithNumberStyles(NumberStyles value);
-        new INumberParser<T> WithFormatProvider(IFormatProvider value);
-    }
+        public DateTimeParseOptions WithStyles(DateTimeStyles value) =>
+            Update(Formats, value, FormatProvider);
 
-    partial interface IDateTimeParser<out T> : ICulturalParser<T>
-    {
-        ImmutableArray<string> Formats { get; }
-        DateTimeStyles Styles { get; }
-        IDateTimeParser<T> WithFormats(ImmutableArray<string> formats);
-        new IDateTimeParser<T> WithFormatProvider(IFormatProvider value);
+        public new DateTimeParseOptions WithFormatProvider(IFormatProvider value) =>
+            Update(Formats, Styles, value);
+
+        public DateTimeParseOptions Update(ImmutableArray<string> formats, DateTimeStyles styles, IFormatProvider formatProvider) =>
+            UpdateCore(formats, styles, formatProvider);
+
+        protected virtual DateTimeParseOptions UpdateCore(ImmutableArray<string> formats, DateTimeStyles styles, IFormatProvider formatProvider) =>
+            new DateTimeParseOptions(formats, styles, formatProvider);
+
+        protected override GlobalParseOptions UpdateCore(IFormatProvider formatProvider) =>
+            UpdateCore(Formats, Styles, formatProvider);
+
+        internal DateTime ParseFormatted(string s) =>
+            DateTime.ParseExact(s, CachedFormatsArray, FormatProvider, Styles);
     }
 
     static partial class Parser
     {
-        static class Stock
+        static class Parsers
         {
             public static readonly IParser<string> Id = Create(s => s);
-            public static readonly IParser<int> Int = Create(s => int.Parse(s, CultureInfo.InvariantCulture));
-            public static readonly IParser<int> PositiveInt = Create(s => int.Parse(s, NumberStyles.None, CultureInfo.InvariantCulture));
+
+            public static readonly IParser<int, NumberParseOptions> Int32 =
+                Create(new NumberParseOptions(NumberStyles.Integer, CultureInfo.InvariantCulture),
+                       (s, options) => int.Parse(s, options.Styles, options.FormatProvider));
+
+            public static readonly IParser<double, NumberParseOptions> Double =
+                Create(new NumberParseOptions(NumberStyles.Float, CultureInfo.InvariantCulture),
+                       (s, options) => double.Parse(s, options.Styles, options.FormatProvider));
+
+            public static readonly IParser<DateTime, DateTimeParseOptions> DateTime =
+                Create(new DateTimeParseOptions(ImmutableArray<string>.Empty, DateTimeStyles.None, CultureInfo.InvariantCulture),
+                       (s, options) => options.Formats.IsDefaultOrEmpty
+                                     ? options.ParseFormatted(s)
+                                     : System.DateTime.Parse(s, options.FormatProvider, options.Styles));
         }
 
-        public static IParser<int> Int() => Stock.Int;
-        public static IParser<int> Int(NumberStyles styles) => Create(s => int.Parse(s, styles, CultureInfo.InvariantCulture));
-        public static IParser<int> PositiveInt(NumberStyles styles) => Create(s => int.Parse(s, styles, CultureInfo.InvariantCulture));
-        public static IParser<string> String() => Stock.Id;
+        public static IParser<int> Int32() => Parsers.Int32;
+        public static IParser<int> Int32(NumberStyles styles) => Create(s => int.Parse(s, styles, CultureInfo.InvariantCulture));
+        public static IParser<double> Double() => Parsers.Double;
+        public static IParser<double> Double(NumberStyles styles) => Create(s => double.Parse(s, styles, CultureInfo.InvariantCulture));
+        public static IParser<DateTime> DateTime() => Parsers.DateTime;
+        public static IParser<DateTime> DateTime(string format) => Parsers.DateTime.WithOptions(Parsers.DateTime.Options.WithFormats(ImmutableArray.Create(format)));
+        public static IParser<string> String() => Parsers.Id;
+
+        public static IParser<T> Range<T>(this IParser<T> parser, T min, T max) where T : IComparable<T> =>
+            from v in parser
+            select v.CompareTo(min) >= 0 && v.CompareTo(max) <= 0 ? v : throw new Exception();
 
         public static IParser<T> Create<T>(Func<string, T> parser) =>
             new DelegatingParser<T>(parser);
+
+        public static IParser<T, TOptions> Create<T, TOptions>(TOptions options, Func<string, TOptions, T> parser) =>
+            new DelegatingParser<T, TOptions>(options, parser);
 
         public static IParser<U> Select<T, U>(this IParser<T> parser, Func<T, U> f) =>
             Create(args => f(parser.Parse(args)));
@@ -136,16 +171,20 @@ namespace Largs
                 _parser(text);
         }
 
-        partial class NumberParser<T> : IParser<T>
+        sealed class DelegatingParser<T, TOptions> : IParser<T, TOptions>
         {
-            readonly NumberStyles _styles;
-            readonly Func<string, NumberStyles, T> _parser;
+            readonly Func<string, TOptions, T> _parser;
 
-            public NumberParser(NumberStyles styles, Func<string, NumberStyles, T> parser) =>
-                _parser = parser;
+            public DelegatingParser(TOptions options, Func<string, TOptions, T> parser) =>
+                (Options, _parser) = (options, parser);
+
+            public TOptions Options { get; }
+
+            public IParser<T, TOptions> WithOptions(TOptions value) =>
+                new DelegatingParser<T, TOptions>(value, _parser);
 
             public T Parse(string text) =>
-                _parser(text, _styles);
+                _parser(text, Options);
         }
     }
 }
