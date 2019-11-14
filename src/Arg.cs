@@ -220,7 +220,7 @@ namespace Largs
             new DelegatingArgBinder<T>(binder, inspector);
 
         public static IArgBinder<T> PassThru<T, U>(this IArgBinder<U> inner, Func<IArgSource, T> binder) =>
-            new DelegatingArgBinder<T>(binder, inner.Inspect);
+            Create(binder, inner.Inspect);
 
         public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
             binder.PassThru(args => f(binder.Bind(args)));
