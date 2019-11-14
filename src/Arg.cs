@@ -146,9 +146,9 @@ namespace Largs
 
         public string Lookup(ArgInfo arg)
         {
-            return Lookup("--".PrependToSome(arg.Name     ) is string ln ? s => s == ln : Mismatch,
-                          "--".PrependToSome(arg.ShortName) is string sn ? s => s == sn : Mismatch,
-                          "--".PrependToSome(arg.OtherName) is string on ? s => s == on : Mismatch);
+            return Lookup(String.ConcatAll("--", arg.Name     ) is string ln ? s => s == ln : Mismatch,
+                          String.ConcatAll("--", arg.ShortName) is string sn ? s => s == sn : Mismatch,
+                          String.ConcatAll("--", arg.OtherName) is string on ? s => s == on : Mismatch);
 
             string Lookup(Func<string, bool> @long, Func<string, bool> @short, Func<string, bool> other)
             {
