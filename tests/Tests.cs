@@ -16,6 +16,7 @@
 
 namespace Largs.Tests
 {
+    using System.Collections.Generic;
     using NUnit.Framework;
 
     public class Tests
@@ -24,10 +25,10 @@ namespace Largs.Tests
         public void Test1()
         {
             var args =
-                from foo in Arg.Require("foo", Parser.Int32())
-                from bar in Arg.Optional("bar", 123, Parser.Int32())
-                from baz in Arg.OptionalValue("baz", Parser.Int32())
-                from qux in Arg.Optional("qux", "?", Parser.String())
+                from foo in Arg.Optional("foo", -1, Parser.Int32())
+                join bar in Arg.Optional("bar", 123, Parser.Int32())  on 1 equals 1
+                join baz in Arg.OptionalValue("baz", Parser.Int32())  on 1 equals 1
+                join qux in Arg.Optional("qux", "?", Parser.String()) on 1 equals 1
                 select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux };
 
             var commandLine = "--foo 42".Split();
@@ -37,6 +38,12 @@ namespace Largs.Tests
             Assert.That(actual.Bar, Is.EqualTo(123));
             Assert.That(actual.Baz, Is.Null);
             Assert.That(actual.Qux, Is.EqualTo("?"));
+
+            var infos = new Queue<ArgInfo>(args.Inspect());
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("foo"));
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("qux"));
         }
     }
 }
