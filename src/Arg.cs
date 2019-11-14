@@ -83,7 +83,7 @@ namespace Largs
 
         public Func<IArgSource, ArgInfo, T> Binder { get; }
 
-        public IArgBinder<TArg> WithBinder<TArg>(Func<IArgSource, ArgInfo, TArg> binder) =>
+        public Arg<TArg> WithBinder<TArg>(Func<IArgSource, ArgInfo, TArg> binder) =>
             new Arg<TArg>(_info, binder);
 
         IArgBinder<T> WithInfo(ArgInfo value) =>
