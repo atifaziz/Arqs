@@ -105,21 +105,21 @@ namespace Largs
     static partial class Arg
     {
         public static Arg<T> Require<T>(string name, IParser<T> parser) =>
-            new ArgInfo(name).ToArg((source, info) => source.Lookup(info.Name, info.ShortName, info.OtherName) is string s ? parser.Parse(s) : throw new Exception());
+            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : throw new Exception());
 
         public static Arg<T> Optional<T>(string name, T @default, IParser<T> parser) =>
-            new ArgInfo(name).ToArg((source, info) => source.Lookup(info.Name, info.ShortName, info.OtherName) is string s ? parser.Parse(s) : @default);
+            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : @default);
 
         public static Arg<T> Optional<T>(string name, IParser<T> parser) where T : class =>
-            new ArgInfo(name).ToArg((source, info) => source.Lookup(info.Name, info.ShortName, info.OtherName) is string s ? parser.Parse(s) : null);
+            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : null);
 
         public static Arg<T?> OptionalValue<T>(string name, IParser<T> parser) where T : struct =>
-            new ArgInfo(name).ToArg((source, info) => source.Lookup(info.Name, info.ShortName, info.OtherName) is string s ? parser.Parse(s) : (T?)null);
+            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : (T?)null);
     }
 
     partial interface IArgSource
     {
-        string Lookup(string longName, string shortName, string otherName);
+        string Lookup(ArgInfo arg);
     }
 
     partial class ArgSource : IArgSource
@@ -128,7 +128,7 @@ namespace Largs
 
         sealed class EmptyArgSource : IArgSource
         {
-            public string Lookup(string longName, string shortName, string otherName) => null;
+            public string Lookup(ArgInfo arg) => null;
         }
 
         readonly (bool Taken, string Text)[] _args;
@@ -144,11 +144,11 @@ namespace Largs
 
         static readonly Func<string, bool> Mismatch = _ => false;
 
-        public string Lookup(string longName, string shortName, string otherName)
+        public string Lookup(ArgInfo arg)
         {
-            return Lookup("--".PrependToSome(longName ) is string ln ? s => s == ln : Mismatch,
-                          "--".PrependToSome(shortName) is string sn ? s => s == sn : Mismatch,
-                          "--".PrependToSome(otherName) is string on ? s => s == on : Mismatch);
+            return Lookup("--".PrependToSome(arg.Name     ) is string ln ? s => s == ln : Mismatch,
+                          "--".PrependToSome(arg.ShortName) is string sn ? s => s == sn : Mismatch,
+                          "--".PrependToSome(arg.OtherName) is string on ? s => s == on : Mismatch);
 
             string Lookup(Func<string, bool> @long, Func<string, bool> @short, Func<string, bool> other)
             {
