@@ -23,12 +23,14 @@ namespace Largs
     partial class ArgInfo
     {
         public ArgInfo(string name, string shortName = null, string otherName = null,
-                       string description = null)
+                       string description = null,
+                       bool isFlag = false)
         {
             Name        = name ?? throw new ArgumentNullException(nameof(name));
             ShortName   = shortName;
             OtherName   = otherName;
             Description = description;
+            IsFlag      = isFlag;
         }
 
         public string Name        { get; }
@@ -107,7 +109,7 @@ namespace Largs
     static partial class Arg
     {
         public static Arg<bool> Flag(string name) =>
-            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) != null);
+            new ArgInfo(name, isFlag: true).ToArg((source, info) => source.Lookup(info) != null);
 
         public static Arg<T> Require<T>(string name, IParser<T> parser) =>
             new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : throw new Exception());
