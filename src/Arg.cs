@@ -18,6 +18,7 @@ namespace Largs
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.Immutable;
     using System.Linq;
 
     partial class ArgInfo
@@ -192,7 +193,9 @@ namespace Largs
         }
 
         public IEnumerable<string> Unused =>
-            from arg in _args where !arg.Taken select arg.Text;
+            from arg in _args.Skip(1)
+            where !arg.Taken
+            select arg.Text;
     }
 
     partial interface IArgBinder<out T>
@@ -215,8 +218,13 @@ namespace Largs
                 source => (first.Bind(source), second.Bind(source)),
                 args   => { first.Inspect(args); second.Inspect(args); });
 
-        public static T Bind<T>(this IArgBinder<T> binder, params string[] args) =>
-            binder.Bind(new ArgSource(args));
+        public static (T Result, ImmutableArray<string> Tail)
+            Bind<T>(this IArgBinder<T> binder, params string[] args)
+        {
+            var source = new ArgSource(args);
+            var result = binder.Bind(source);
+            return (result, ImmutableArray.CreateRange(source.Unused));
+        }
 
         public static IArgBinder<T> Create<T>(Func<IArgSource, T> binder, Action<ICollection<ArgInfo>> inspector) =>
             new DelegatingArgBinder<T>(binder, inspector);

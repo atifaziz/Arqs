@@ -31,13 +31,14 @@ namespace Largs.Tests
                 join qux in Arg.Optional("qux", "?", Parser.String()) on 1 equals 1
                 select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux };
 
-            var commandLine = "--bar --foo 42".Split();
-            var actual = args.Bind(commandLine);
+            var commandLine = "--bar --foo 42 hello world".Split();
+            var (result, tail) = args.Bind(commandLine);
 
-            Assert.That(actual.Foo, Is.EqualTo(42));
-            Assert.That(actual.Bar, Is.True);
-            Assert.That(actual.Baz, Is.Null);
-            Assert.That(actual.Qux, Is.EqualTo("?"));
+            Assert.That(result.Foo, Is.EqualTo(42));
+            Assert.That(result.Bar, Is.True);
+            Assert.That(result.Baz, Is.Null);
+            Assert.That(result.Qux, Is.EqualTo("?"));
+            Assert.That(tail, Is.EqualTo(new[] { "hello", "world" }));
 
             var infos = new Queue<ArgInfo>(args.Inspect());
             Assert.That(infos.Dequeue().Name, Is.EqualTo("foo"));
