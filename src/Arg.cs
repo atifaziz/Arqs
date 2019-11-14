@@ -159,16 +159,16 @@ namespace Largs
 
             string Lookup(Predicate<string> @long, Predicate<string> @short, Predicate<string> other)
             {
-                ref var prev = ref _args[0];
-                foreach (ref var arg in _args.AsSpan())
+                for (var i = 1; i < _args.Length; i++)
                 {
+                    ref var prev = ref _args[i - 1];
+                    ref var arg = ref _args[i];
                     if (!prev.Taken && (@long(prev.Text) || @short(prev.Text) || other(prev.Text)))
                     {
                         prev.Taken = true;
                         arg.Taken = true;
                         return arg.Text;
                     }
-                    prev = arg;
                 }
 
                 return null;
@@ -176,7 +176,7 @@ namespace Largs
 
             string LookupFlag(Predicate<string> @long, Predicate<string> @short, Predicate<string> other)
             {
-                foreach (ref var arg in _args.AsSpan())
+                foreach (ref var arg in _args.AsSpan(1))
                 {
                     if (!arg.Taken && (@long(arg.Text) || @short(arg.Text) || other(arg.Text)))
                     {
