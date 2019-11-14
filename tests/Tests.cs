@@ -26,16 +26,16 @@ namespace Largs.Tests
         {
             var args =
                 from foo in Arg.Optional("foo", -1, Parser.Int32())
-                join bar in Arg.Optional("bar", 123, Parser.Int32())  on 1 equals 1
+                join bar in Arg.Flag("bar")  on 1 equals 1
                 join baz in Arg.OptionalValue("baz", Parser.Int32())  on 1 equals 1
                 join qux in Arg.Optional("qux", "?", Parser.String()) on 1 equals 1
                 select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux };
 
-            var commandLine = "--foo 42".Split();
+            var commandLine = "--bar --foo 42".Split();
             var actual = args.Bind(commandLine);
 
             Assert.That(actual.Foo, Is.EqualTo(42));
-            Assert.That(actual.Bar, Is.EqualTo(123));
+            Assert.That(actual.Bar, Is.True);
             Assert.That(actual.Baz, Is.Null);
             Assert.That(actual.Qux, Is.EqualTo("?"));
 

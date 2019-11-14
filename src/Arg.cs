@@ -35,6 +35,7 @@ namespace Largs
         public string ShortName   { get; }
         public string OtherName   { get; }
         public string Description { get; }
+        public bool   IsFlag      { get; }
 
         public ArgInfo WithName(string value)
             => value == null ? throw new ArgumentNullException(nameof(value))
@@ -75,6 +76,7 @@ namespace Largs
         public string ShortName   => _info.ShortName;
         public string OtherName   => _info.OtherName;
         public string Description => _info.Description;
+        public bool   IsFlag      => _info.IsFlag;
 
         public Func<IArgSource, ArgInfo, T> Binder { get; }
 
@@ -104,6 +106,9 @@ namespace Largs
 
     static partial class Arg
     {
+        public static Arg<bool> Flag(string name) =>
+            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) != null);
+
         public static Arg<T> Require<T>(string name, IParser<T> parser) =>
             new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : throw new Exception());
 
@@ -142,15 +147,17 @@ namespace Largs
                 a[i++].Text = arg;
         }
 
-        static readonly Func<string, bool> Mismatch = _ => false;
+        static readonly Predicate<string> Mismatch = _ => false;
 
         public string Lookup(ArgInfo arg)
         {
-            return Lookup(String.ConcatAll("--", arg.Name     ) is string ln ? s => s == ln : Mismatch,
-                          String.ConcatAll("--", arg.ShortName) is string sn ? s => s == sn : Mismatch,
-                          String.ConcatAll("--", arg.OtherName) is string on ? s => s == on : Mismatch);
+            var lf = String.ConcatAll("--", arg.Name     ) is string ln ? s => s == ln : Mismatch;
+            var sf = String.ConcatAll("--", arg.ShortName) is string sn ? s => s == sn : Mismatch;
+            var of = String.ConcatAll("--", arg.OtherName) is string on ? s => s == on : Mismatch;
 
-            string Lookup(Func<string, bool> @long, Func<string, bool> @short, Func<string, bool> other)
+            return arg.IsFlag ? LookupFlag(lf, sf, of) : Lookup(lf, sf, of);
+
+            string Lookup(Predicate<string> @long, Predicate<string> @short, Predicate<string> other)
             {
                 ref var prev = ref _args[0];
                 foreach (ref var arg in _args.AsSpan())
@@ -162,6 +169,20 @@ namespace Largs
                         return arg.Text;
                     }
                     prev = arg;
+                }
+
+                return null;
+            }
+
+            string LookupFlag(Predicate<string> @long, Predicate<string> @short, Predicate<string> other)
+            {
+                foreach (ref var arg in _args.AsSpan())
+                {
+                    if (!arg.Taken && (@long(arg.Text) || @short(arg.Text) || other(arg.Text)))
+                    {
+                        arg.Taken = true;
+                        return arg.Text;
+                    }
                 }
 
                 return null;
