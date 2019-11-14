@@ -219,11 +219,8 @@ namespace Largs
         public static IArgBinder<T> Create<T>(Func<IArgSource, T> binder, Action<ICollection<ArgInfo>> inspector) =>
             new DelegatingArgBinder<T>(binder, inspector);
 
-        public static IArgBinder<T> PassThru<T, U>(this IArgBinder<U> inner, Func<IArgSource, T> binder) =>
-            Create(binder, inner.Inspect);
-
         public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
-            binder.PassThru(args => f(binder.Bind(args)));
+            Create(args => f(binder.Bind(args)), binder.Inspect);
 
         public static IArgBinder<U> SelectMany<T, U>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f) =>
             Create(args => f(binder.Bind(args)).Bind(args),
