@@ -58,14 +58,14 @@ namespace Largs
             string.Join("|", Name, ShortName, OtherName)
             + String.ConcatAll(": " + Description);
 
-        public Arg<T> ToArg<T>(Func<IArgSource, T> binder) => new Arg<T>(this, binder);
+        public Arg<T> ToArg<T>(Func<IArgSource, ArgInfo, T> binder) => new Arg<T>(this, binder);
     }
 
     partial class Arg<T> : IArgBinder<T>
     {
         readonly ArgInfo _info;
 
-        public Arg(ArgInfo info, Func<IArgSource, T> binder)
+        public Arg(ArgInfo info, Func<IArgSource, ArgInfo, T> binder)
         {
             _info = info ?? throw new ArgumentNullException(nameof(info));
             Binder = binder ?? throw new ArgumentNullException(nameof(binder));
@@ -76,9 +76,9 @@ namespace Largs
         public string OtherName   => _info.OtherName;
         public string Description => _info.Description;
 
-        public Func<IArgSource, T> Binder { get; }
+        public Func<IArgSource, ArgInfo, T> Binder { get; }
 
-        public IArgBinder<TArg> WithBinder<TArg>(Func<IArgSource, TArg> binder) =>
+        public IArgBinder<TArg> WithBinder<TArg>(Func<IArgSource, ArgInfo, TArg> binder) =>
             new Arg<TArg>(_info, binder);
 
         IArgBinder<T> WithInfo(ArgInfo value) =>
@@ -97,7 +97,7 @@ namespace Largs
             WithInfo(_info.WithDescription(value));
 
         public T Bind(IArgSource source) =>
-            Binder(source);
+            Binder(source, _info);
 
         public void Inspect(ICollection<ArgInfo> args) => args.Add(_info);
     }
@@ -105,16 +105,16 @@ namespace Largs
     static partial class Arg
     {
         public static Arg<T> Require<T>(string name, IParser<T> parser) =>
-            new ArgInfo(name).ToArg(source => source.Lookup(name, null, null) is string s ? parser.Parse(s) : throw new Exception());
+            new ArgInfo(name).ToArg((source, info) => source.Lookup(info.Name, info.ShortName, info.OtherName) is string s ? parser.Parse(s) : throw new Exception());
 
         public static Arg<T> Optional<T>(string name, T @default, IParser<T> parser) =>
-            new ArgInfo(name).ToArg(source => source.Lookup(name, null, null) is string s ? parser.Parse(s) : @default);
+            new ArgInfo(name).ToArg((source, info) => source.Lookup(info.Name, info.ShortName, info.OtherName) is string s ? parser.Parse(s) : @default);
 
         public static Arg<T> Optional<T>(string name, IParser<T> parser) where T : class =>
-            new ArgInfo(name).ToArg(source => source.Lookup(name, null, null) is string s ? parser.Parse(s) : null);
+            new ArgInfo(name).ToArg((source, info) => source.Lookup(info.Name, info.ShortName, info.OtherName) is string s ? parser.Parse(s) : null);
 
         public static Arg<T?> OptionalValue<T>(string name, IParser<T> parser) where T : struct =>
-            new ArgInfo(name).ToArg(source => source.Lookup(name, null, null) is string s ? parser.Parse(s) : (T?)null);
+            new ArgInfo(name).ToArg((source, info) => source.Lookup(info.Name, info.ShortName, info.OtherName) is string s ? parser.Parse(s) : (T?)null);
     }
 
     partial interface IArgSource
