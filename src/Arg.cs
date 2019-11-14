@@ -123,6 +123,30 @@ namespace Largs
 
         public static Arg<T?> OptionalValue<T>(string name, IParser<T> parser) where T : struct =>
             new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : (T?)null);
+
+        public static Arg<ImmutableArray<T>> List<T>(this Arg<T> arg) =>
+            arg.WithBinder((source, info) =>
+            {
+                var tokens = new List<string>();
+                while (source.Lookup(info) is string s)
+                    tokens.Add(s);
+                return ImmutableArray.CreateRange(from t in tokens
+                                                  select arg.Bind(new SingletonArgSource(t)));
+            });
+
+        sealed class SingletonArgSource : IArgSource
+        {
+            string _value;
+
+            public SingletonArgSource(string value) => _value = value;
+
+            public string Lookup(ArgInfo arg)
+            {
+                var value = _value;
+                _value = null;
+                return value;
+            }
+        }
     }
 
     partial interface IArgSource
