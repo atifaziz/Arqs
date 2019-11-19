@@ -26,13 +26,14 @@ namespace Largs
     {
         public ArgInfo(string name, string shortName = null, string otherName = null,
                        string description = null,
-                       bool isFlag = false)
+                       bool isFlag = false, bool isBreaker = false)
         {
             Name        = name ?? throw new ArgumentNullException(nameof(name));
             ShortName   = shortName;
             OtherName   = otherName;
             Description = description;
             IsFlag      = isFlag;
+            IsBreaker   = isBreaker;
         }
 
         public string Name        { get; }
@@ -40,24 +41,28 @@ namespace Largs
         public string OtherName   { get; }
         public string Description { get; }
         public bool   IsFlag      { get; }
+        public bool   IsBreaker   { get; }
 
         public ArgInfo WithName(string value)
             => value == null ? throw new ArgumentNullException(nameof(value))
              : value == Name ? this
-             : UpdateCore(value, ShortName, OtherName, Description, IsFlag);
+             : UpdateCore(value, ShortName, OtherName, Description, IsFlag, IsBreaker);
 
         public ArgInfo WithShortName(string value) =>
-            value == ShortName ? this : UpdateCore(Name, value, OtherName, Description, IsFlag);
+            value == ShortName ? this : UpdateCore(Name, value, OtherName, Description, IsFlag, IsBreaker);
 
         public ArgInfo WithOtherName(string value) =>
-            value == OtherName ? this : UpdateCore(Name, ShortName, value, Description, IsFlag);
+            value == OtherName ? this : UpdateCore(Name, ShortName, value, Description, IsFlag, IsBreaker);
 
         public ArgInfo WithDescription(string value) =>
-            value == Description ? this : UpdateCore(Name, ShortName, OtherName, value, IsFlag);
+            value == Description ? this : UpdateCore(Name, ShortName, OtherName, value, IsFlag, IsBreaker);
+
+        public ArgInfo WithIsBreaker(bool value) =>
+            value == IsBreaker ? this : UpdateCore(Name, ShortName, OtherName, Description, IsFlag, value);
 
         protected virtual ArgInfo UpdateCore(string name, string shortName, string otherName,
-                                             string description, bool isFlag) =>
-            new ArgInfo(name, shortName, otherName, description, isFlag);
+                                             string description, bool isFlag, bool isBreaker) =>
+            new ArgInfo(name, shortName, otherName, description, isFlag, isBreaker);
 
         public override string ToString() =>
             string.Join("|", Name, ShortName, OtherName)
@@ -81,6 +86,7 @@ namespace Largs
         public string OtherName   => _info.OtherName;
         public string Description => _info.Description;
         public bool   IsFlag      => _info.IsFlag;
+        public bool   IsBreaker   => _info.IsBreaker;
 
         public Func<IArgSource, ArgInfo, T> Binder { get; }
 
@@ -101,6 +107,11 @@ namespace Largs
 
         public Arg<T> WithDescription(string value) =>
             WithInfo(_info.WithDescription(value));
+
+        public Arg<T> WithIsBreaker(bool value) =>
+            WithInfo(_info.WithIsBreaker(value));
+
+        public Arg<T> Break() => WithIsBreaker(true);
 
         public T Bind(IArgSource source) =>
             Binder(source, _info);
@@ -166,6 +177,7 @@ namespace Largs
         }
 
         readonly (bool Taken, string Text)[] _args;
+        bool _breaking;
 
         public ArgSource(ICollection<string> args)
         {
@@ -184,7 +196,15 @@ namespace Largs
             var sf = String.ConcatAll("--", arg.ShortName) is string sn ? s => s == sn : Mismatch;
             var of = String.ConcatAll("--", arg.OtherName) is string on ? s => s == on : Mismatch;
 
-            return arg.IsFlag ? LookupFlag(lf, sf, of) : Lookup(lf, sf, of);
+            var result = arg.IsFlag ? LookupFlag(lf, sf, of) : Lookup(lf, sf, of);
+
+            if (_breaking)
+                return null;
+
+            if (arg.IsBreaker && result != null)
+                _breaking = true;
+
+            return result;
 
             string Lookup(Predicate<string> @long, Predicate<string> @short, Predicate<string> other)
             {
