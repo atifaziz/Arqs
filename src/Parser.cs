@@ -153,6 +153,9 @@ namespace Largs
         public static IParser<T> Cast<T>(this IParser parser) =>
             Create(s => (T)parser.Parse(s));
 
+        public static IParser<T?> Nullable<T>(this IParser<T> parser) where T : struct =>
+            parser.Cast<T?>();
+
         public static IParser<T> Create<T>(Func<string, T> parser) =>
             new DelegatingParser<T>(parser);
 
