@@ -21,9 +21,14 @@ namespace Largs
     using System.Globalization;
     using System.Linq;
 
-    partial interface IParser<out T>
+    partial interface IParser
     {
-        T Parse(string text);
+        object Parse(string text);
+    }
+
+    partial interface IParser<out T> : IParser
+    {
+        new T Parse(string text);
     }
 
     partial interface IParser<out T, TOptions> : IParser<T>
@@ -145,6 +150,9 @@ namespace Largs
             from v in parser
             select v.CompareTo(min) >= 0 && v.CompareTo(max) <= 0 ? v : throw new Exception();
 
+        public static IParser<T> Cast<T>(this IParser parser) =>
+            Create(s => (T)parser.Parse(s));
+
         public static IParser<T> Create<T>(Func<string, T> parser) =>
             new DelegatingParser<T>(parser);
 
@@ -169,6 +177,8 @@ namespace Largs
 
             public T Parse(string text) =>
                 _parser(text);
+
+            object IParser.Parse(string text) => Parse(text);
         }
 
         sealed class DelegatingParser<T, TOptions> : IParser<T, TOptions>
@@ -185,6 +195,8 @@ namespace Largs
 
             public T Parse(string text) =>
                 _parser(text, Options);
+
+            object IParser.Parse(string text) => Parse(text);
         }
     }
 }
