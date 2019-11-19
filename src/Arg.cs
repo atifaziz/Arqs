@@ -44,20 +44,20 @@ namespace Largs
         public ArgInfo WithName(string value)
             => value == null ? throw new ArgumentNullException(nameof(value))
              : value == Name ? this
-             : UpdateCore(value, ShortName, OtherName, Description);
+             : UpdateCore(value, ShortName, OtherName, Description, IsFlag);
 
         public ArgInfo WithShortName(string value) =>
-            value == ShortName ? this : UpdateCore(Name, value, OtherName, Description);
+            value == ShortName ? this : UpdateCore(Name, value, OtherName, Description, IsFlag);
 
         public ArgInfo WithOtherName(string value) =>
-            value == OtherName ? this : UpdateCore(Name, ShortName, value, Description);
+            value == OtherName ? this : UpdateCore(Name, ShortName, value, Description, IsFlag);
 
         public ArgInfo WithDescription(string value) =>
-            value == Description ? this : UpdateCore(Name, ShortName, OtherName, value);
+            value == Description ? this : UpdateCore(Name, ShortName, OtherName, value, IsFlag);
 
         protected virtual ArgInfo UpdateCore(string name, string shortName, string otherName,
-                                             string description) =>
-            new ArgInfo(name, shortName, otherName, description);
+                                             string description, bool isFlag) =>
+            new ArgInfo(name, shortName, otherName, description, isFlag);
 
         public override string ToString() =>
             string.Join("|", Name, ShortName, OtherName)
