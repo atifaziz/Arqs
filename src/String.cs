@@ -16,6 +16,8 @@
 
 namespace Largs
 {
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Text;
 
     static class String
@@ -106,5 +108,11 @@ namespace Largs
 
             return sb.Append(suffix).ToString();
         }
+
+        public static IEnumerable<string> Choose(params string[] strings) =>
+            Choose((IEnumerable<string>)strings);
+
+        public static IEnumerable<string> Choose(IEnumerable<string> strings) =>
+            from s in strings where s != null select s;
     }
 }

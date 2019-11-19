@@ -7,8 +7,10 @@ namespace Largs
     public partial interface IArgBinder<out T> {}
     public partial class ArgBinder {}
 
+    public partial struct ParseResult<T> {}
+    public partial class ParseResult { }
     public partial interface IParser {}
-    public partial interface IParser<out T> {}
-    public partial interface IParser<out T, TOptions> {}
+    public partial interface IParser<T> {}
+    public partial interface IParser<T, TOptions> {}
     public partial class Parser {}
 }

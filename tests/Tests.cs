@@ -25,10 +25,10 @@ namespace Largs.Tests
         public void Test1()
         {
             var args =
-                from foo in Arg.Optional("foo", -1, Parser.Int32()).List()
+                from foo in Arg.Value("foo", -1, Parser.Int32()).List()
                 join bar in Arg.Flag("bar")  on 1 equals 1
-                join baz in Arg.OptionalValue("baz", Parser.Int32())  on 1 equals 1
-                join qux in Arg.Optional("qux", "?", Parser.String()) on 1 equals 1
+                join baz in Arg.Value("baz", Parser.Int32().Nullable())  on 1 equals 1
+                join qux in Arg.Value("qux", "?", Parser.String()) on 1 equals 1
                 select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux };
 
             var commandLine = "--bar --foo 4 hello --foo 2 world".Split();

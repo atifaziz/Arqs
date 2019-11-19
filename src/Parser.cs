@@ -17,21 +17,60 @@
 namespace Largs
 {
     using System;
+    using System.Collections.Generic;
     using System.Collections.Immutable;
     using System.Globalization;
     using System.Linq;
 
+    readonly partial struct ParseResult<T> : IEquatable<ParseResult<T>>
+    {
+        public ParseResult(T value) =>
+            (Success, Value) = (true, value);
+
+        public bool Success { get; }
+        public T    Value   { get; }
+
+        public override string ToString() =>
+            Success ? $"{Value}" : string.Empty;
+
+        public bool Equals(ParseResult<T> other) =>
+            Success == other.Success && EqualityComparer<T>.Default.Equals(Value, other.Value);
+
+        public override bool Equals(object obj) =>
+            obj is ParseResult<T> other && Equals(other);
+
+        public override int GetHashCode() =>
+            Success ? EqualityComparer<T>.Default.GetHashCode(Value) : 0;
+
+        public static bool operator ==(ParseResult<T> left, ParseResult<T> right) =>
+            left.Equals(right);
+
+        public static bool operator !=(ParseResult<T> left, ParseResult<T> right) =>
+            !left.Equals(right);
+
+        public static bool operator true(ParseResult<T> result) => result.Success;
+        public static bool operator false(ParseResult<T> result) => !result.Success;
+
+        public void Deconstruct(out bool success, out T value) =>
+            (success, value) = (Success, Value);
+    }
+
+    static partial class ParseResult
+    {
+        public static ParseResult<T> Success<T>(T value) => new ParseResult<T>(value);
+    }
+
     partial interface IParser
     {
-        object Parse(string text);
+        ParseResult<object> Parse(string text);
     }
 
-    partial interface IParser<out T> : IParser
+    partial interface IParser<T> : IParser
     {
-        new T Parse(string text);
+        new ParseResult<T> Parse(string text);
     }
 
-    partial interface IParser<out T, TOptions> : IParser<T>
+    partial interface IParser<T, TOptions> : IParser<T>
     {
         TOptions Options { get; }
         IParser<T, TOptions> WithOptions(TOptions value);
@@ -113,35 +152,35 @@ namespace Largs
         protected override GlobalParseOptions UpdateCore(IFormatProvider formatProvider) =>
             UpdateCore(Formats, Styles, formatProvider);
 
-        internal DateTime ParseFormatted(string s) =>
-            DateTime.ParseExact(s, CachedFormatsArray, FormatProvider, Styles);
+        internal ParseResult<DateTime> ParseFormatted(string s) =>
+            DateTime.TryParseExact(s, CachedFormatsArray, FormatProvider, Styles, out var v) ? ParseResult.Success(v) : default;
     }
 
     static partial class Parser
     {
         static class Parsers
         {
-            public static readonly IParser<string> Id = Create(s => s);
+            public static readonly IParser<string> Id = Create(ParseResult.Success);
 
             public static readonly IParser<int, NumberParseOptions> Int32 =
                 Create(new NumberParseOptions(NumberStyles.Integer, CultureInfo.InvariantCulture),
-                       (s, options) => int.Parse(s, options.Styles, options.FormatProvider));
+                       (s, options) => int.TryParse(s, options.Styles, options.FormatProvider, out var v) ? ParseResult.Success(v) : default);
 
             public static readonly IParser<double, NumberParseOptions> Double =
                 Create(new NumberParseOptions(NumberStyles.Float, CultureInfo.InvariantCulture),
-                       (s, options) => double.Parse(s, options.Styles, options.FormatProvider));
+                       (s, options) => double.TryParse(s, options.Styles, options.FormatProvider, out var v) ? ParseResult.Success(v) : default);
 
             public static readonly IParser<DateTime, DateTimeParseOptions> DateTime =
                 Create(new DateTimeParseOptions(ImmutableArray<string>.Empty, DateTimeStyles.None, CultureInfo.InvariantCulture),
                        (s, options) => options.Formats.IsDefaultOrEmpty
                                      ? options.ParseFormatted(s)
-                                     : System.DateTime.Parse(s, options.FormatProvider, options.Styles));
+                                     : System.DateTime.TryParse(s, options.FormatProvider, options.Styles, out var v) ? ParseResult.Success(v) : default);
         }
 
         public static IParser<int> Int32() => Parsers.Int32;
-        public static IParser<int> Int32(NumberStyles styles) => Create(s => int.Parse(s, styles, CultureInfo.InvariantCulture));
+        public static IParser<int> Int32(NumberStyles styles) => Parsers.Int32.WithOptions(Parsers.Int32.Options.WithStyles(styles));
         public static IParser<double> Double() => Parsers.Double;
-        public static IParser<double> Double(NumberStyles styles) => Create(s => double.Parse(s, styles, CultureInfo.InvariantCulture));
+        public static IParser<double> Double(NumberStyles styles) => Parsers.Double.WithOptions(Parsers.Int32.Options.WithStyles(styles));
         public static IParser<DateTime> DateTime() => Parsers.DateTime;
         public static IParser<DateTime> DateTime(string format) => Parsers.DateTime.WithOptions(Parsers.DateTime.Options.WithFormats(ImmutableArray.Create(format)));
         public static IParser<string> String() => Parsers.Id;
@@ -151,44 +190,45 @@ namespace Largs
             select v.CompareTo(min) >= 0 && v.CompareTo(max) <= 0 ? v : throw new Exception();
 
         public static IParser<T> Cast<T>(this IParser parser) =>
-            Create(s => (T)parser.Parse(s));
+            Create(s => parser.Parse(s) is (true, var v) ? ParseResult.Success((T)v) : default);
 
         public static IParser<T?> Nullable<T>(this IParser<T> parser) where T : struct =>
             parser.Cast<T?>();
 
-        public static IParser<T> Create<T>(Func<string, T> parser) =>
+        public static IParser<T> Create<T>(Func<string, ParseResult<T>> parser) =>
             new DelegatingParser<T>(parser);
 
-        public static IParser<T, TOptions> Create<T, TOptions>(TOptions options, Func<string, TOptions, T> parser) =>
+        public static IParser<T, TOptions> Create<T, TOptions>(TOptions options, Func<string, TOptions, ParseResult<T>> parser) =>
             new DelegatingParser<T, TOptions>(options, parser);
 
         public static IParser<U> Select<T, U>(this IParser<T> parser, Func<T, U> f) =>
-            Create(args => f(parser.Parse(args)));
+            Create(args => parser.Parse(args) is (true, var v) ? ParseResult.Success(f(v)) : default);
 
         public static IParser<U> SelectMany<T, U>(this IParser<T> parser, Func<T, IParser<U>> f) =>
-            Create(args => f(parser.Parse(args)).Parse(args));
+            Create(args => parser.Parse(args) is (true, var v) ? f(v).Parse(args) : default);
 
         public static IParser<V> SelectMany<T, U, V>(this IParser<T> parser, Func<T, IParser<U>> f, Func<T, U, V> g) =>
             parser.Select(t => f(t).Select(u => g(t, u))).SelectMany(pv => pv);
 
         sealed class DelegatingParser<T> : IParser<T>
         {
-            readonly Func<string, T> _parser;
+            readonly Func<string, ParseResult<T>> _parser;
 
-            public DelegatingParser(Func<string, T> parser) =>
+            public DelegatingParser(Func<string, ParseResult<T>> parser) =>
                 _parser = parser;
 
-            public T Parse(string text) =>
+            public ParseResult<T> Parse(string text) =>
                 _parser(text);
 
-            object IParser.Parse(string text) => Parse(text);
+            ParseResult<object> IParser.Parse(string text) =>
+                Parse(text) is (true, var v) ? ParseResult.Success((object)v) : default;
         }
 
         sealed class DelegatingParser<T, TOptions> : IParser<T, TOptions>
         {
-            readonly Func<string, TOptions, T> _parser;
+            readonly Func<string, TOptions, ParseResult<T>> _parser;
 
-            public DelegatingParser(TOptions options, Func<string, TOptions, T> parser) =>
+            public DelegatingParser(TOptions options, Func<string, TOptions, ParseResult<T>> parser) =>
                 (Options, _parser) = (options, parser);
 
             public TOptions Options { get; }
@@ -196,10 +236,11 @@ namespace Largs
             public IParser<T, TOptions> WithOptions(TOptions value) =>
                 new DelegatingParser<T, TOptions>(value, _parser);
 
-            public T Parse(string text) =>
+            public ParseResult<T> Parse(string text) =>
                 _parser(text, Options);
 
-            object IParser.Parse(string text) => Parse(text);
+            ParseResult<object> IParser.Parse(string text) =>
+                Parse(text) is (true, var v) ? ParseResult.Success((object)v) : default;
         }
     }
 }

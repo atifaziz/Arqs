@@ -113,17 +113,11 @@ namespace Largs
         public static Arg<bool> Flag(string name) =>
             new ArgInfo(name, isFlag: true).ToArg((source, info) => source.Lookup(info) != null);
 
-        public static Arg<T> Require<T>(string name, IParser<T> parser) =>
-            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : throw new Exception());
+        public static Arg<T> Value<T>(string name, T @default, IParser<T> parser) =>
+            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) is (true, var v) ? v : throw source.InvalidArgValue(info, s) : @default);
 
-        public static Arg<T> Optional<T>(string name, T @default, IParser<T> parser) =>
-            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : @default);
-
-        public static Arg<T> Optional<T>(string name, IParser<T> parser) where T : class =>
-            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : null);
-
-        public static Arg<T?> OptionalValue<T>(string name, IParser<T> parser) where T : struct =>
-            new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) : (T?)null);
+        public static Arg<T> Value<T>(string name, IParser<T> parser) =>
+            Value(name, default, parser);
 
         public static Arg<ImmutableArray<T>> List<T>(this Arg<T> arg) =>
             arg.WithBinder((source, info) =>
@@ -132,14 +126,16 @@ namespace Largs
                 while (source.Lookup(info) is string s)
                     tokens.Add(s);
                 return ImmutableArray.CreateRange(from t in tokens
-                                                  select arg.Bind(new SingletonArgSource(t)));
+                                                  select arg.Bind(new SingletonArgSource(source, t)));
             });
 
         sealed class SingletonArgSource : IArgSource
         {
+            readonly IArgSource _other;
             string _value;
 
-            public SingletonArgSource(string value) => _value = value;
+            public SingletonArgSource(IArgSource other, string value) =>
+                (_other, _value) = (other, value);
 
             public string Lookup(ArgInfo arg)
             {
@@ -147,12 +143,16 @@ namespace Largs
                 _value = null;
                 return value;
             }
+
+            public Exception InvalidArgValue(ArgInfo arg, string text) =>
+                _other.InvalidArgValue(arg, text);
         }
     }
 
     partial interface IArgSource
     {
         string Lookup(ArgInfo arg);
+        Exception InvalidArgValue(ArgInfo arg, string text);
     }
 
     partial class ArgSource : IArgSource
@@ -162,6 +162,7 @@ namespace Largs
         sealed class EmptyArgSource : IArgSource
         {
             public string Lookup(ArgInfo arg) => null;
+            public Exception InvalidArgValue(ArgInfo arg, string text) => throw new NotImplementedException();
         }
 
         readonly (bool Taken, string Text)[] _args;
@@ -216,6 +217,9 @@ namespace Largs
                 return null;
             }
         }
+
+        public Exception InvalidArgValue(ArgInfo arg, string text) =>
+            throw new Exception($"Invalid value for argument \"{string.Join(", ", String.Choose(arg.Name, arg.ShortName, arg.OtherName))}\": {text}");
 
         public IEnumerable<string> Unused =>
             from arg in _args.Skip(1)
