@@ -88,7 +88,7 @@ namespace Largs
             new Arg<TArg>(_info, binder);
 
         IArgBinder<T> WithInfo(ArgInfo value) =>
-            value == _info ? this : new Arg<T>(_info, Binder);
+            value == _info ? this : new Arg<T>(value, Binder);
 
         public IArgBinder<T> WithName(string value) =>
             WithInfo(_info.WithName(value));
