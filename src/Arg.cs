@@ -87,19 +87,19 @@ namespace Largs
         public Arg<TArg> WithBinder<TArg>(Func<IArgSource, ArgInfo, TArg> binder) =>
             new Arg<TArg>(_info, binder);
 
-        IArgBinder<T> WithInfo(ArgInfo value) =>
+        Arg<T> WithInfo(ArgInfo value) =>
             value == _info ? this : new Arg<T>(value, Binder);
 
-        public IArgBinder<T> WithName(string value) =>
+        public Arg<T> WithName(string value) =>
             WithInfo(_info.WithName(value));
 
-        public IArgBinder<T> WithShortName(string value) =>
+        public Arg<T> WithShortName(string value) =>
             WithInfo(_info.WithShortName(value));
 
-        public IArgBinder<T> WithOtherName(string value) =>
+        public Arg<T> WithOtherName(string value) =>
             WithInfo(_info.WithOtherName(value));
 
-        public IArgBinder<T> WithDescription(string value) =>
+        public Arg<T> WithDescription(string value) =>
             WithInfo(_info.WithDescription(value));
 
         public T Bind(IArgSource source) =>
