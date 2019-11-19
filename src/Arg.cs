@@ -192,9 +192,12 @@ namespace Largs
 
         public string Lookup(ArgInfo arg)
         {
-            var lf = String.ConcatAll("--", arg.Name     ) is string ln ? s => s == ln : Mismatch;
-            var sf = String.ConcatAll("--", arg.ShortName) is string sn ? s => s == sn : Mismatch;
-            var of = String.ConcatAll("--", arg.OtherName) is string on ? s => s == on : Mismatch;
+            static string Dash(string s) =>
+                s == null ? null : (s.Length == 1 ? "-" : "--") + s;
+
+            var lf = Dash(arg.Name     ) is string ln ? s => s == ln : Mismatch;
+            var sf = Dash(arg.ShortName) is string sn ? s => s == sn : Mismatch;
+            var of = Dash(arg.OtherName) is string on ? s => s == on : Mismatch;
 
             var result = arg.IsFlag ? LookupFlag(lf, sf, of) : Lookup(lf, sf, of);
 
