@@ -210,6 +210,15 @@ namespace Largs
         public static IParser<V> SelectMany<T, U, V>(this IParser<T> parser, Func<T, IParser<U>> f, Func<T, U, V> g) =>
             parser.Select(t => f(t).Select(u => g(t, u))).SelectMany(pv => pv);
 
+        public static IParser<V>
+            Join<T, U, _, V>(
+                this IParser<T> first,
+                IParser<U> second,
+                Func<T, _> unused1, Func<U, _> unused2,
+                Func<T, U, V> resultSelector) =>
+            from e in first.Zip(second)
+            select resultSelector(e.First, e.Second);
+
         public static IParser<(T First, U Second)>
             Zip<T, U>(this IParser<T> first, IParser<U> second) =>
             Create(s => first.Parse(s) is (true, var a) && second.Parse(s) is (true, var b) ? ParseResult.Success((a, b)) : default);
