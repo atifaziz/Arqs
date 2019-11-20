@@ -22,6 +22,7 @@ namespace Largs.Sample
                 {
                     Help = help,
                     Num = num,
+                    Force = force,
                 };
 
             var (options, tail) = q.Bind(args);
