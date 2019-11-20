@@ -127,6 +127,13 @@ namespace Largs
         public static Arg<T> Value<T>(string name, T @default, IParser<T> parser) =>
             new ArgInfo(name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) is (true, var v) ? v : throw source.InvalidArgValue(info, s) : @default);
 
+        public static Arg<T> Once<T>(this Arg<T> arg) =>
+            arg.WithBinder((source, info) =>
+            {
+                var result = arg.Binder(source, info);
+                return source.Lookup(info) == null ? result : throw new Exception($"Argument \"{string.Join(", ", String.Choose(info.Name, info.ShortName, info.OtherName))}\" was specified more than once."); ;
+            });
+
         public static Arg<T> Value<T>(string name, IParser<T> parser) =>
             Value(name, default, parser);
 
