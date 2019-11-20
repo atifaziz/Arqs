@@ -210,6 +210,10 @@ namespace Largs
         public static IParser<V> SelectMany<T, U, V>(this IParser<T> parser, Func<T, IParser<U>> f, Func<T, U, V> g) =>
             parser.Select(t => f(t).Select(u => g(t, u))).SelectMany(pv => pv);
 
+        public static IParser<(T First, U Second)>
+            Zip<T, U>(this IParser<T> first, IParser<U> second) =>
+            Create(s => first.Parse(s) is (true, var a) && second.Parse(s) is (true, var b) ? ParseResult.Success((a, b)) : default);
+
         sealed class DelegatingParser<T> : IParser<T>
         {
             readonly Func<string, ParseResult<T>> _parser;
