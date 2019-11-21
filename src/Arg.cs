@@ -22,7 +22,14 @@ namespace Largs
     using System.Linq;
     using Unit = System.ValueTuple;
 
-    partial class ArgInfo
+    partial interface IArg
+    {
+        string  Name        { get; }
+        string  Description { get; }
+        IReader Reader      { get; }
+    }
+
+    partial class ArgInfo : IArg
     {
         public ArgInfo(IReader reader,
                        string name, string description = null,
@@ -94,10 +101,10 @@ namespace Largs
 
         public Arg<T> Break() => WithIsBreaker(true);
 
-        public T Bind(Func<ArgInfo, object> source) =>
+        public T Bind(Func<IArg, object> source) =>
             _binder(source(_info));
 
-        public void Inspect(ICollection<ArgInfo> args) => args.Add(_info);
+        public void Inspect(ICollection<IArg> args) => args.Add(_info);
     }
 
     static partial class Arg
@@ -137,8 +144,8 @@ namespace Largs
 
     partial interface IArgBinder<out T>
     {
-        T Bind(Func<ArgInfo, object> source);
-        void Inspect(ICollection<ArgInfo> args);
+        T Bind(Func<IArg, object> source);
+        void Inspect(ICollection<IArg> args);
     }
 
     static partial class Reader
@@ -166,9 +173,9 @@ namespace Largs
     {
         public static readonly IArgBinder<Unit> Nop = Create<Unit>(_ => default, delegate {});
 
-        public static IList<ArgInfo> Inspect<T>(this IArgBinder<T> binder)
+        public static IList<IArg> Inspect<T>(this IArgBinder<T> binder)
         {
-            var infos = new List<ArgInfo>();
+            var infos = new List<IArg>();
             binder.Inspect(infos);
             return infos;
         }
@@ -180,7 +187,7 @@ namespace Largs
         public static (T Result, ImmutableArray<string> Tail)
             Bind<T>(this IArgBinder<T> binder, params string[] args)
         {
-            var infos = new List<ArgInfo>();
+            var infos = new List<IArg>();
             binder.Inspect(infos);
             var values = new object[infos.Count];
             using var e = args.AsEnumerable().GetEnumerator();
@@ -208,7 +215,7 @@ namespace Largs
             return (binder.Bind(info => values[infos.IndexOf(info)]), tail.ToImmutableArray());
         }
 
-        public static IArgBinder<T> Create<T>(Func<Func<ArgInfo, object>, T> binder, Action<ICollection<ArgInfo>> inspector) =>
+        public static IArgBinder<T> Create<T>(Func<Func<IArg, object>, T> binder, Action<ICollection<IArg>> inspector) =>
             new DelegatingArgBinder<T>(binder, inspector);
 
         public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
@@ -233,20 +240,20 @@ namespace Largs
 
         sealed class DelegatingArgBinder<T> : IArgBinder<T>
         {
-            readonly Func<Func<ArgInfo, object>, T> _binder;
-            readonly Action<ICollection<ArgInfo>> _inspector;
+            readonly Func<Func<IArg, object>, T> _binder;
+            readonly Action<ICollection<IArg>> _inspector;
 
-            public DelegatingArgBinder(Func<Func<ArgInfo, object>, T> binder,
-                                       Action<ICollection<ArgInfo>> inspector)
+            public DelegatingArgBinder(Func<Func<IArg, object>, T> binder,
+                                       Action<ICollection<IArg>> inspector)
             {
                 _binder = binder;
                 _inspector = inspector;
             }
 
-            public T Bind(Func<ArgInfo, object> source) =>
+            public T Bind(Func<IArg, object> source) =>
                 _binder(source);
 
-            public void Inspect(ICollection<ArgInfo> args) =>
+            public void Inspect(ICollection<IArg> args) =>
                 _inspector(args);
         }
     }

@@ -40,7 +40,7 @@ namespace Largs.Tests
             Assert.That(result.Qux, Is.EqualTo("?"));
             Assert.That(tail, Is.EqualTo(new[] { "hello", "world" }));
 
-            var infos = new Queue<ArgInfo>(args.Inspect());
+            var infos = new Queue<IArg>(args.Inspect());
             Assert.That(infos.Dequeue().Name, Is.EqualTo("foo"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));

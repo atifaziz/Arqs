@@ -1,5 +1,6 @@
 namespace Largs
 {
+    public partial interface IArg {}
     public partial class Arg { }
     public partial class Arg<T> { }
     public partial class ArgInfo {}
