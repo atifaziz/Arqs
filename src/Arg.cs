@@ -57,7 +57,7 @@ namespace Largs
 
         public override string ToString() => Name + String.ConcatAll(": " + Description);
 
-        public Arg<T> ToArg<T>(Func<IArgSource, ArgInfo, T> binder, Func<object, T> binder2) => new Arg<T>(this, binder, binder2);
+        public Arg<T> ToArg<T>(Func<object, T> binder) => new Arg<T>(this, binder);
     }
 
     partial class Arg<T> : IArgBinder<T>
@@ -65,11 +65,10 @@ namespace Largs
         readonly ArgInfo _info;
         readonly Func<object, T> _binder;
 
-        public Arg(ArgInfo info, Func<IArgSource, ArgInfo, T> binder, Func<object, T> binder2)
+        public Arg(ArgInfo info, Func<object, T> binder)
         {
             _info = info ?? throw new ArgumentNullException(nameof(info));
-            Binder = binder;// ?? throw new ArgumentNullException(nameof(binder));
-            _binder = binder2 ?? throw new ArgumentNullException(nameof(binder2));
+            _binder = binder ?? throw new ArgumentNullException(nameof(binder));
         }
 
         public IReader Reader      => _info.Reader;
@@ -78,16 +77,11 @@ namespace Largs
         public bool    IsFlag      => _info.IsFlag;
         public bool    IsBreaker   => _info.IsBreaker;
 
-        public Func<IArgSource, ArgInfo, T> Binder { get; }
-
-        public Arg<TArg> WithBinder<TArg>(Func<IArgSource, ArgInfo, TArg> binder) =>
-            new Arg<TArg>(_info, binder, null);
-
         public Arg<TArg> WithReader<TArg>(IReader reader, Func<object, TArg> binder) =>
-            new Arg<TArg>(new ArgInfo(reader, Name, Description, IsFlag, IsBreaker), null, binder);
+            new Arg<TArg>(new ArgInfo(reader, Name, Description, IsFlag, IsBreaker), binder);
 
         Arg<T> WithInfo(ArgInfo value) =>
-            value == _info ? this : new Arg<T>(value, Binder, _binder);
+            value == _info ? this : new Arg<T>(value, _binder);
 
         public Arg<T> WithName(string value) =>
             WithInfo(_info.WithName(value));
@@ -100,9 +94,6 @@ namespace Largs
 
         public Arg<T> Break() => WithIsBreaker(true);
 
-        public T Bind(IArgSource source) =>
-            Binder(source, _info);
-
         public T Bind(Func<ArgInfo, object> source) =>
             _binder(source(_info));
 
@@ -112,32 +103,15 @@ namespace Largs
     static partial class Arg
     {
         public static Arg<bool> Flag(string name) =>
-            new ArgInfo(Reader.Flag(), name, isFlag: true).ToArg((source, info) => source.Lookup(info) != null, v => (bool?)v ?? false);
+            new ArgInfo(Reader.Flag(), name, isFlag: true).ToArg(v => (bool?)v ?? false);
 
         public static Arg<T> Value<T>(string name, T @default, IParser<T> parser) =>
-            new ArgInfo(Reader.Value(parser), name).ToArg((source, info) => source.Lookup(info) is string s ? parser.Parse(s) is (true, var v) ? v : throw source.InvalidArgValue(info, s) : @default, v => v == null ? @default : (T)v);
-
-        public static Arg<T> Once<T>(this Arg<T> arg) =>
-            arg.WithBinder((source, info) =>
-            {
-                var result = arg.Binder(source, info);
-                return source.Lookup(info) == null ? result : throw new Exception($"Argument \"{info.Name}\" was specified more than once."); ;
-            });
+            new ArgInfo(Reader.Value(parser), name).ToArg(v => v == null ? @default : (T)v);
 
         public static Arg<T> Value<T>(string name, IParser<T> parser) =>
             Value(name, default, parser);
 
         public static Arg<ImmutableArray<T>> List<T>(this Arg<T> arg) =>
-            /*
-            arg.WithBinder((source, info) =>
-            {
-                var tokens = new List<string>();
-                while (source.Lookup(info) is string s)
-                    tokens.Add(s);
-                return ImmutableArray.CreateRange(from t in tokens
-                                                  select arg.Bind(new SingletonArgSource(source, t)));
-            });
-            */
             arg.WithReader(new ArrayReader<T>(arg.Reader), v => (ImmutableArray<T>?)v ?? ImmutableArray<T>.Empty);
 
         sealed class ArrayReader<T> : IReader
@@ -154,113 +128,6 @@ namespace Largs
                     _ => default
                 };
         }
-
-        sealed class SingletonArgSource : IArgSource
-        {
-            readonly IArgSource _other;
-            string _value;
-
-            public SingletonArgSource(IArgSource other, string value) =>
-                (_other, _value) = (other, value);
-
-            public string Lookup(ArgInfo arg)
-            {
-                var value = _value;
-                _value = null;
-                return value;
-            }
-
-            public Exception InvalidArgValue(ArgInfo arg, string text) =>
-                _other.InvalidArgValue(arg, text);
-        }
-    }
-
-    partial interface IArgSource
-    {
-        string Lookup(ArgInfo arg);
-        Exception InvalidArgValue(ArgInfo arg, string text);
-    }
-
-    partial class ArgSource : IArgSource
-    {
-        public static readonly IArgSource Empty = new EmptyArgSource();
-
-        sealed class EmptyArgSource : IArgSource
-        {
-            public string Lookup(ArgInfo arg) => null;
-            public Exception InvalidArgValue(ArgInfo arg, string text) => throw new NotImplementedException();
-        }
-
-        readonly (bool Taken, string Text)[] _args;
-        bool _breaking;
-
-        public ArgSource(ICollection<string> args)
-        {
-            _args = new (bool Taken, string Text)[args.Count + 1];
-            var a = _args.AsSpan(1);
-            var i = 0;
-            foreach (var arg in args)
-                a[i++].Text = arg;
-        }
-
-        static readonly Predicate<string> Mismatch = _ => false;
-
-        public string Lookup(ArgInfo arg)
-        {
-            static string Dash(string s) =>
-                s == null ? null : (s.Length == 1 ? "-" : "--") + s;
-
-            var lf = Dash(arg.Name) is string ln ? s => s == ln : Mismatch;
-
-            var result = arg.IsFlag ? LookupFlag(lf) : Lookup(lf);
-
-            if (_breaking)
-                return null;
-
-            if (arg.IsBreaker && result != null)
-                _breaking = true;
-
-            return result;
-
-            string Lookup(Predicate<string> predicate)
-            {
-                for (var i = 1; i < _args.Length; i++)
-                {
-                    ref var prev = ref _args[i - 1];
-                    ref var arg = ref _args[i];
-                    if (!prev.Taken && predicate(prev.Text))
-                    {
-                        prev.Taken = true;
-                        arg.Taken = true;
-                        return arg.Text;
-                    }
-                }
-
-                return null;
-            }
-
-            string LookupFlag(Predicate<string> predicate)
-            {
-                foreach (ref var arg in _args.AsSpan(1))
-                {
-                    if (!arg.Taken && predicate(arg.Text))
-                    {
-                        arg.Taken = true;
-                        return arg.Text;
-                    }
-                }
-
-                return null;
-            }
-        }
-
-        public Exception InvalidArgValue(ArgInfo arg, string text) =>
-            throw new Exception($"Invalid value for argument \"{arg.Name}\": {text}");
-
-        public IEnumerable<string> Unused =>
-            from arg in _args.Skip(1)
-            where !arg.Taken
-            select arg.Text;
     }
 
     partial interface IReader
@@ -270,7 +137,6 @@ namespace Largs
 
     partial interface IArgBinder<out T>
     {
-        T Bind(IArgSource source);
         T Bind(Func<ArgInfo, object> source);
         void Inspect(ICollection<ArgInfo> args);
     }
@@ -298,7 +164,7 @@ namespace Largs
 
     static partial class ArgBinder
     {
-        public static readonly IArgBinder<Unit> Nop = Create<Unit>(_ => default, _ => default, delegate {});
+        public static readonly IArgBinder<Unit> Nop = Create<Unit>(_ => default, delegate {});
 
         public static IList<ArgInfo> Inspect<T>(this IArgBinder<T> binder)
         {
@@ -308,10 +174,8 @@ namespace Largs
         }
 
         public static IArgBinder<(T, U)> Zip<T, U>(this IArgBinder<T> first, IArgBinder<U> second) =>
-            Create(
-                source   => (first.Bind(source), second.Bind(source)),
-                bindings => (first.Bind(bindings), second.Bind(bindings)),
-                args     => { first.Inspect(args); second.Inspect(args); });
+            Create(bindings => (first.Bind(bindings), second.Bind(bindings)),
+                   args     => { first.Inspect(args); second.Inspect(args); });
 
         public static (T Result, ImmutableArray<string> Tail)
             Bind<T>(this IArgBinder<T> binder, params string[] args)
@@ -344,19 +208,18 @@ namespace Largs
             return (binder.Bind(info => values[infos.IndexOf(info)]), tail.ToImmutableArray());
         }
 
-        public static IArgBinder<T> Create<T>(Func<IArgSource, T> binder, Func<Func<ArgInfo, object>, T> binder2, Action<ICollection<ArgInfo>> inspector) =>
-            new DelegatingArgBinder<T>(binder, binder2, inspector);
+        public static IArgBinder<T> Create<T>(Func<Func<ArgInfo, object>, T> binder, Action<ICollection<ArgInfo>> inspector) =>
+            new DelegatingArgBinder<T>(binder, inspector);
 
         public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
-            Create(args => f(binder.Bind(args)), bindings => f(binder.Bind(bindings)), binder.Inspect);
+            Create(bindings => f(binder.Bind(bindings)), binder.Inspect);
 
         public static IArgBinder<U> SelectMany<T, U>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f) =>
-            Create(args => f(binder.Bind(args)).Bind(args),
-                   bindings => f(binder.Bind(bindings)).Bind(bindings),
+            Create(bindings => f(binder.Bind(bindings)).Bind(bindings),
                    args =>
                    {
                        binder.Inspect(args);
-                       f(binder.Bind(ArgSource.Empty)).Inspect(args);
+                       f(binder.Bind(delegate { throw new InvalidOperationException(); })).Inspect(args);
                    });
 
         public static IArgBinder<V> SelectMany<T, U, V>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f, Func<T, U, V> g) =>
@@ -370,24 +233,18 @@ namespace Largs
 
         sealed class DelegatingArgBinder<T> : IArgBinder<T>
         {
-            readonly Func<IArgSource, T> _binder;
-            readonly Func<Func<ArgInfo, object>, T> _binder2;
+            readonly Func<Func<ArgInfo, object>, T> _binder;
             readonly Action<ICollection<ArgInfo>> _inspector;
 
-            public DelegatingArgBinder(Func<IArgSource, T> binder,
-                                       Func<Func<ArgInfo, object>, T> binder2,
+            public DelegatingArgBinder(Func<Func<ArgInfo, object>, T> binder,
                                        Action<ICollection<ArgInfo>> inspector)
             {
                 _binder = binder;
-                _binder2 = binder2;
                 _inspector = inspector;
             }
 
-            public T Bind(IArgSource source) =>
-                _binder(source);
-
             public T Bind(Func<ArgInfo, object> source) =>
-                _binder2(source);
+                _binder(source);
 
             public void Inspect(ICollection<ArgInfo> args) =>
                 _inspector(args);
