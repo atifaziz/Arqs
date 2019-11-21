@@ -4,6 +4,7 @@ namespace Largs
     public partial class Arg<T> { }
     public partial class ArgInfo {}
     public partial interface IArgSource {}
+    public partial interface IReader {}
     public partial interface IArgBinder<out T> {}
     public partial class ArgBinder {}
 
