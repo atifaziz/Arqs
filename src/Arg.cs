@@ -32,35 +32,27 @@ namespace Largs
     partial class ArgInfo : IArg
     {
         public ArgInfo(IReader reader,
-                       string name, string description = null,
-                       bool isFlag = false, bool isBreaker = false)
+                       string name, string description = null)
         {
             Reader      = reader ?? throw new ArgumentNullException(nameof(reader));
             Name        = name ?? throw new ArgumentNullException(nameof(name));
             Description = description;
-            IsFlag      = isFlag;
-            IsBreaker   = isBreaker;
         }
 
         public IReader  Reader      { get; }
         public string   Name        { get; }
         public string   Description { get; }
-        public bool     IsFlag      { get; }
-        public bool     IsBreaker   { get; }
 
         public ArgInfo WithName(string value)
             => value == null ? throw new ArgumentNullException(nameof(value))
              : value == Name ? this
-             : UpdateCore(value, Description, IsFlag, IsBreaker);
+             : UpdateCore(value, Description);
 
         public ArgInfo WithDescription(string value) =>
-            value == Description ? this : UpdateCore(Name, value, IsFlag, IsBreaker);
+            value == Description ? this : UpdateCore(Name, value);
 
-        public ArgInfo WithIsBreaker(bool value) =>
-            value == IsBreaker ? this : UpdateCore(Name, Description, IsFlag, value);
-
-        protected virtual ArgInfo UpdateCore(string name, string description, bool isFlag, bool isBreaker) =>
-            new ArgInfo(Reader, name, description, isFlag, isBreaker);
+        protected virtual ArgInfo UpdateCore(string name, string description) =>
+            new ArgInfo(Reader, name, description);
 
         public override string ToString() => Name + String.ConcatAll(": " + Description);
 
@@ -81,11 +73,9 @@ namespace Largs
         public IReader Reader      => _info.Reader;
         public string  Name        => _info.Name;
         public string  Description => _info.Description;
-        public bool    IsFlag      => _info.IsFlag;
-        public bool    IsBreaker   => _info.IsBreaker;
 
         public Arg<TArg> WithReader<TArg>(IReader reader, Func<object, TArg> binder) =>
-            new Arg<TArg>(new ArgInfo(reader, Name, Description, IsFlag, IsBreaker), binder);
+            new Arg<TArg>(new ArgInfo(reader, Name, Description), binder);
 
         Arg<T> WithInfo(ArgInfo value) =>
             value == _info ? this : new Arg<T>(value, _binder);
@@ -96,11 +86,6 @@ namespace Largs
         public Arg<T> WithDescription(string value) =>
             WithInfo(_info.WithDescription(value));
 
-        public Arg<T> WithIsBreaker(bool value) =>
-            WithInfo(_info.WithIsBreaker(value));
-
-        public Arg<T> Break() => WithIsBreaker(true);
-
         public T Bind(Func<IArg, object> source) =>
             _binder(source(_info));
 
@@ -110,7 +95,7 @@ namespace Largs
     static partial class Arg
     {
         public static Arg<bool> Flag(string name) =>
-            new ArgInfo(Reader.Flag(), name, isFlag: true).ToArg(v => (bool?)v ?? false);
+            new ArgInfo(Reader.Flag(), name).ToArg(v => (bool?)v ?? false);
 
         public static Arg<T> Value<T>(string name, T @default, IParser<T> parser) =>
             new ArgInfo(Reader.Value(parser), name).ToArg(v => v == null ? @default : (T)v);
