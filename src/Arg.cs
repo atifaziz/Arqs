@@ -24,21 +24,16 @@ namespace Largs
 
     partial class ArgInfo
     {
-        public ArgInfo(string name, string shortName = null, string otherName = null,
-                       string description = null,
+        public ArgInfo(string name, string description = null,
                        bool isFlag = false, bool isBreaker = false)
         {
             Name        = name ?? throw new ArgumentNullException(nameof(name));
-            ShortName   = shortName;
-            OtherName   = otherName;
             Description = description;
             IsFlag      = isFlag;
             IsBreaker   = isBreaker;
         }
 
         public string Name        { get; }
-        public string ShortName   { get; }
-        public string OtherName   { get; }
         public string Description { get; }
         public bool   IsFlag      { get; }
         public bool   IsBreaker   { get; }
@@ -46,27 +41,18 @@ namespace Largs
         public ArgInfo WithName(string value)
             => value == null ? throw new ArgumentNullException(nameof(value))
              : value == Name ? this
-             : UpdateCore(value, ShortName, OtherName, Description, IsFlag, IsBreaker);
-
-        public ArgInfo WithShortName(string value) =>
-            value == ShortName ? this : UpdateCore(Name, value, OtherName, Description, IsFlag, IsBreaker);
-
-        public ArgInfo WithOtherName(string value) =>
-            value == OtherName ? this : UpdateCore(Name, ShortName, value, Description, IsFlag, IsBreaker);
+             : UpdateCore(value, Description, IsFlag, IsBreaker);
 
         public ArgInfo WithDescription(string value) =>
-            value == Description ? this : UpdateCore(Name, ShortName, OtherName, value, IsFlag, IsBreaker);
+            value == Description ? this : UpdateCore(Name, value, IsFlag, IsBreaker);
 
         public ArgInfo WithIsBreaker(bool value) =>
-            value == IsBreaker ? this : UpdateCore(Name, ShortName, OtherName, Description, IsFlag, value);
+            value == IsBreaker ? this : UpdateCore(Name, Description, IsFlag, value);
 
-        protected virtual ArgInfo UpdateCore(string name, string shortName, string otherName,
-                                             string description, bool isFlag, bool isBreaker) =>
-            new ArgInfo(name, shortName, otherName, description, isFlag, isBreaker);
+        protected virtual ArgInfo UpdateCore(string name, string description, bool isFlag, bool isBreaker) =>
+            new ArgInfo(name, description, isFlag, isBreaker);
 
-        public override string ToString() =>
-            string.Join("|", Name, ShortName, OtherName)
-            + String.ConcatAll(": " + Description);
+        public override string ToString() => Name + String.ConcatAll(": " + Description);
 
         public Arg<T> ToArg<T>(Func<IArgSource, ArgInfo, T> binder) => new Arg<T>(this, binder);
     }
@@ -82,8 +68,6 @@ namespace Largs
         }
 
         public string Name        => _info.Name;
-        public string ShortName   => _info.ShortName;
-        public string OtherName   => _info.OtherName;
         public string Description => _info.Description;
         public bool   IsFlag      => _info.IsFlag;
         public bool   IsBreaker   => _info.IsBreaker;
@@ -98,12 +82,6 @@ namespace Largs
 
         public Arg<T> WithName(string value) =>
             WithInfo(_info.WithName(value));
-
-        public Arg<T> WithShortName(string value) =>
-            WithInfo(_info.WithShortName(value));
-
-        public Arg<T> WithOtherName(string value) =>
-            WithInfo(_info.WithOtherName(value));
 
         public Arg<T> WithDescription(string value) =>
             WithInfo(_info.WithDescription(value));
@@ -131,7 +109,7 @@ namespace Largs
             arg.WithBinder((source, info) =>
             {
                 var result = arg.Binder(source, info);
-                return source.Lookup(info) == null ? result : throw new Exception($"Argument \"{string.Join(", ", String.Choose(info.Name, info.ShortName, info.OtherName))}\" was specified more than once."); ;
+                return source.Lookup(info) == null ? result : throw new Exception($"Argument \"{info.Name}\" was specified more than once."); ;
             });
 
         public static Arg<T> Value<T>(string name, IParser<T> parser) =>
@@ -202,11 +180,9 @@ namespace Largs
             static string Dash(string s) =>
                 s == null ? null : (s.Length == 1 ? "-" : "--") + s;
 
-            var lf = Dash(arg.Name     ) is string ln ? s => s == ln : Mismatch;
-            var sf = Dash(arg.ShortName) is string sn ? s => s == sn : Mismatch;
-            var of = Dash(arg.OtherName) is string on ? s => s == on : Mismatch;
+            var lf = Dash(arg.Name) is string ln ? s => s == ln : Mismatch;
 
-            var result = arg.IsFlag ? LookupFlag(lf, sf, of) : Lookup(lf, sf, of);
+            var result = arg.IsFlag ? LookupFlag(lf) : Lookup(lf);
 
             if (_breaking)
                 return null;
@@ -216,13 +192,13 @@ namespace Largs
 
             return result;
 
-            string Lookup(Predicate<string> @long, Predicate<string> @short, Predicate<string> other)
+            string Lookup(Predicate<string> predicate)
             {
                 for (var i = 1; i < _args.Length; i++)
                 {
                     ref var prev = ref _args[i - 1];
                     ref var arg = ref _args[i];
-                    if (!prev.Taken && (@long(prev.Text) || @short(prev.Text) || other(prev.Text)))
+                    if (!prev.Taken && predicate(prev.Text))
                     {
                         prev.Taken = true;
                         arg.Taken = true;
@@ -233,11 +209,11 @@ namespace Largs
                 return null;
             }
 
-            string LookupFlag(Predicate<string> @long, Predicate<string> @short, Predicate<string> other)
+            string LookupFlag(Predicate<string> predicate)
             {
                 foreach (ref var arg in _args.AsSpan(1))
                 {
-                    if (!arg.Taken && (@long(arg.Text) || @short(arg.Text) || other(arg.Text)))
+                    if (!arg.Taken && predicate(arg.Text))
                     {
                         arg.Taken = true;
                         return arg.Text;
@@ -249,7 +225,7 @@ namespace Largs
         }
 
         public Exception InvalidArgValue(ArgInfo arg, string text) =>
-            throw new Exception($"Invalid value for argument \"{string.Join(", ", String.Choose(arg.Name, arg.ShortName, arg.OtherName))}\": {text}");
+            throw new Exception($"Invalid value for argument \"{arg.Name}\": {text}");
 
         public IEnumerable<string> Unused =>
             from arg in _args.Skip(1)
