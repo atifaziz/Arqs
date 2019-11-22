@@ -247,18 +247,34 @@ namespace Largs
             while (e.MoveNext())
             {
                 var arg = e.Current;
-                var name = arg.StartsWith("--", StringComparison.Ordinal) ? arg.Substring(2)
-                         : arg.Length > 1 && arg[0] == '-' ? arg.Substring(1)
-                         : null;
-                if (name == null)
+                if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
-                    tail.Add(arg);
+                    var name = arg.Substring(2);
+                    var i = infos.FindIndex(e => e.Name == name);
+                    if (i < 0)
+                    {
+                        tail.Add(arg);
+                    }
+                    else
+                    {
+                        if (!values[i].Read(e))
+                            throw new Exception("Invalid value for option: " + name);
+                    }
+                }
+                else if (arg.Length > 0 && arg[0] == '-')
+                {
+                    foreach (var ch in arg.Substring(1))
+                    {
+                        var i = infos.FindIndex(e => e.Name.Length == 1 && e.Name[0] == ch);
+                        if (i < 0)
+                            throw new Exception("Invalid option: " + ch);
+                        if (!values[i].Read(e))
+                            throw new Exception("Invalid value for option: " + ch);
+                    }
                 }
                 else
                 {
-                    var i = infos.FindIndex(e => e.Name == name);
-                    if (!values[i].Read(e))
-                        throw new Exception("Invalid value for argument: " + name);
+                    tail.Add(arg);
                 }
             }
 
