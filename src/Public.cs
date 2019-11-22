@@ -1,7 +1,7 @@
 namespace Largs
 {
     public partial interface IArg {}
-    public partial class CommandLine { }
+    public partial class Arg { }
     public partial class Arg<T> { }
     public partial class ListArg<T> {}
     public partial class ArgInfo {}
