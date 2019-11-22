@@ -32,9 +32,12 @@ namespace Largs
 
     partial class ArgInfo
     {
+        public ArgInfo() :
+            this(null)  {}
+
         public ArgInfo(string name, string description = null)
         {
-            Name          = name ?? throw new ArgumentNullException(nameof(name));
+            Name          = name;
             Description   = description;
         }
 
@@ -147,16 +150,22 @@ namespace Largs
         }
     }
 
-    static partial class Arg
+    static partial class Args
     {
         public static Arg<bool> Flag(string name) =>
             new ArgInfo(name).ToArg(Parser.Create<bool>(_ => throw new NotSupportedException()), Reader.Flag, r => r.HasValue);
 
-        public static Arg<T> Value<T>(string name, T @default, IParser<T> parser) =>
+        public static Arg<T> Option<T>(string name, T @default, IParser<T> parser) =>
             new ArgInfo(name).ToArg(parser, () => Reader.Value(parser), r => r.HasValue ? ((IReader<T>)r).Value : @default);
 
-        public static Arg<T> Value<T>(string name, IParser<T> parser) =>
-            Value(name, default, parser);
+        public static Arg<T> Option<T>(string name, IParser<T> parser) =>
+            Option(name, default, parser);
+
+        public static Arg<T> Arg<T>(string name, T @default, IParser<T> parser) =>
+            new ArgInfo().ToArg(parser, () => Reader.Spot(parser), r => r.HasValue ? ((IReader<T>)r).Value : @default);
+
+        public static Arg<T> Arg<T>(string name, IParser<T> parser) =>
+            Arg(name, default, parser);
 
         public static ListArg<T> List<T>(this Arg<T> arg) =>
             new ListArg<T>(arg);
@@ -187,6 +196,9 @@ namespace Largs
 
         public static IReader<int> Flag() =>
             new ValueReader<int>(0, (count, _) => ParseResult.Success(count + 1));
+
+        public static IReader<T> Spot<T>(IParser<T> parser) =>
+            new ValueReader<T>(default, (_, arg) => parser.Parse(arg.Current));
 
         sealed class ValueReader<T> : IReader<T>
         {
@@ -239,6 +251,7 @@ namespace Largs
         {
             var infos = new List<IArg>();
             binder.Inspect(infos);
+            var asi = 0;
             var values = new IReader[infos.Count];
             for (var i = 0; i < infos.Count; i++)
                 values[i] = infos[i].CreateReader();
@@ -253,7 +266,15 @@ namespace Largs
                     var i = infos.FindIndex(e => e.Name == name);
                     if (i < 0)
                     {
-                        tail.Add(arg);
+                        i = infos.FindIndex(asi, e => e.Name == null);
+                        if (i < 0)
+                            tail.Add(arg);
+                        else
+                        {
+                            asi = i + 1;
+                            if (!values[i].Read(e))
+                                throw new Exception("Invalid argument: " + arg);
+                        }
                     }
                     else
                     {
@@ -274,7 +295,15 @@ namespace Largs
                 }
                 else
                 {
-                    tail.Add(arg);
+                    var i = infos.FindIndex(asi, e => e.Name == null);
+                    if (i < 0)
+                        tail.Add(arg);
+                    else
+                    {
+                        asi = i + 1;
+                        if (!values[i].Read(e))
+                            throw new Exception("Invalid argument: " + arg);
+                    }
                 }
             }
 

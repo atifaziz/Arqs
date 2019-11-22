@@ -25,14 +25,16 @@ namespace Largs.Tests
         public void Test1()
         {
             var args =
-                from foo in Arg.Value("foo", -1, Parser.Int32()).List()
-                join bar in Arg.Flag("bar")  on 1 equals 1
-                join baz in Arg.Value("baz", Parser.Int32().Nullable())  on 1 equals 1
-                join qux in Arg.Value("qux", "?", Parser.String()) on 1 equals 1
-                join xs  in Arg.Value("x", Parser.String()).List() on 1 equals 1
-                select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs) };
+                from foo in Args.Option("foo", -1, Parser.Int32()).List()
+                join bar in Args.Flag("bar")  on 1 equals 1
+                join baz in Args.Option("baz", Parser.Int32().Nullable())  on 1 equals 1
+                join qux in Args.Option("qux", "?", Parser.String()) on 1 equals 1
+                join xs  in Args.Option("x", Parser.String()).List() on 1 equals 1
+                join pos1 in Args.Arg("x", Parser.String()) on 1 equals 1
+                join pos2 in Args.Arg("x", Parser.String()) on 1 equals 1
+                select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs), Pos1 = pos1, Pos2 = pos2 };
 
-            var commandLine = "--bar --foo 4 hello --foo 2 -x one -x two world -x three".Split();
+            var commandLine = "1 --bar --foo 4 2 hello --foo 2 -x one -x two world -x three".Split();
             var (result, tail) = args.Bind(commandLine);
 
             Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
@@ -40,6 +42,8 @@ namespace Largs.Tests
             Assert.That(result.Baz, Is.Null);
             Assert.That(result.Qux, Is.EqualTo("?"));
             Assert.That(result.X, Is.EqualTo("one,two,three"));
+            Assert.That(result.Pos1, Is.EqualTo("1"));
+            Assert.That(result.Pos2, Is.EqualTo("2"));
             Assert.That(tail, Is.EqualTo(new[] { "hello", "world" }));
 
             var infos = new Queue<IArg>(args.Inspect());
@@ -48,6 +52,8 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("qux"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("x"));
+            Assert.That(infos.Dequeue().Name, Is.Null);
+            Assert.That(infos.Dequeue().Name, Is.Null);
         }
     }
 }
