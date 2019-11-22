@@ -29,15 +29,17 @@ namespace Largs.Tests
                 join bar in Arg.Flag("bar")  on 1 equals 1
                 join baz in Arg.Value("baz", Parser.Int32().Nullable())  on 1 equals 1
                 join qux in Arg.Value("qux", "?", Parser.String()) on 1 equals 1
-                select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux };
+                join xs  in Arg.Value("x", Parser.String()).List() on 1 equals 1
+                select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs) };
 
-            var commandLine = "--bar --foo 4 hello --foo 2 world".Split();
+            var commandLine = "--bar --foo 4 hello --foo 2 -x one -x two world -x three".Split();
             var (result, tail) = args.Bind(commandLine);
 
             Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
             Assert.That(result.Bar, Is.True);
             Assert.That(result.Baz, Is.Null);
             Assert.That(result.Qux, Is.EqualTo("?"));
+            Assert.That(result.X, Is.EqualTo("one,two,three"));
             Assert.That(tail, Is.EqualTo(new[] { "hello", "world" }));
 
             var infos = new Queue<IArg>(args.Inspect());
@@ -45,6 +47,7 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("qux"));
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("x"));
         }
     }
 }
