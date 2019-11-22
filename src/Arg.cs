@@ -26,22 +26,26 @@ namespace Largs
     {
         string  Name        { get; }
         string  Description { get; }
-        IReader Reader      { get; }
+
+        IReader CreateReader();
     }
 
     partial class ArgInfo : IArg
     {
-        public ArgInfo(IReader reader,
+        public ArgInfo(Func<IReader> readerFactory,
                        string name, string description = null)
         {
-            Reader      = reader ?? throw new ArgumentNullException(nameof(reader));
-            Name        = name ?? throw new ArgumentNullException(nameof(name));
-            Description = description;
+            ReaderFactory = readerFactory ?? throw new ArgumentNullException(nameof(readerFactory));
+            Name          = name ?? throw new ArgumentNullException(nameof(name));
+            Description   = description;
         }
 
-        public IReader  Reader      { get; }
         public string   Name        { get; }
         public string   Description { get; }
+
+        public Func<IReader> ReaderFactory { get; }
+
+        public IReader CreateReader() => ReaderFactory();
 
         public ArgInfo WithName(string value)
             => value == null ? throw new ArgumentNullException(nameof(value))
@@ -52,33 +56,34 @@ namespace Largs
             value == Description ? this : UpdateCore(Name, value);
 
         protected virtual ArgInfo UpdateCore(string name, string description) =>
-            new ArgInfo(Reader, name, description);
+            new ArgInfo(ReaderFactory, name, description);
 
         public override string ToString() => Name + String.ConcatAll(": " + Description);
 
-        public Arg<T> ToArg<T>(Func<object, T> binder) => new Arg<T>(this, binder);
+        public Arg<T> ToArg<T>(IParser<T> parser, Func<IReader, T> binder) => new Arg<T>(this, parser, binder);
     }
 
     partial class Arg<T> : IArgBinder<T>
     {
         readonly ArgInfo _info;
-        readonly Func<object, T> _binder;
+        readonly Func<IReader, T> _binder;
 
-        public Arg(ArgInfo info, Func<object, T> binder)
+        public Arg(ArgInfo info, IParser<T> parser, Func<IReader, T> binder)
         {
             _info = info ?? throw new ArgumentNullException(nameof(info));
+            Parser = parser ?? throw new ArgumentNullException(nameof(parser));
             _binder = binder ?? throw new ArgumentNullException(nameof(binder));
         }
 
-        public IReader Reader      => _info.Reader;
         public string  Name        => _info.Name;
         public string  Description => _info.Description;
 
-        public Arg<TArg> WithReader<TArg>(IReader reader, Func<object, TArg> binder) =>
-            new Arg<TArg>(new ArgInfo(reader, Name, Description), binder);
+        public IParser<T> Parser { get; }
+
+        public Func<IReader> ReaderFactory => _info.ReaderFactory;
 
         Arg<T> WithInfo(ArgInfo value) =>
-            value == _info ? this : new Arg<T>(value, _binder);
+            value == _info ? this : new Arg<T>(value, Parser, _binder);
 
         public Arg<T> WithName(string value) =>
             WithInfo(_info.WithName(value));
@@ -86,7 +91,41 @@ namespace Largs
         public Arg<T> WithDescription(string value) =>
             WithInfo(_info.WithDescription(value));
 
-        public T Bind(Func<IArg, object> source) =>
+        public T Bind(Func<IArg, IReader> source) =>
+            _binder(source(_info));
+
+        public void Inspect(ICollection<IArg> args) => args.Add(_info);
+    }
+
+    partial class ListArg<T> : IArgBinder<ImmutableArray<T>>
+    {
+        readonly ArgInfo _info;
+        readonly Func<object, ImmutableArray<T>> _binder;
+
+        public ListArg(ArgInfo info, IParser<T> parser, Func<object, ImmutableArray<T>> binder)
+        {
+            _info = info ?? throw new ArgumentNullException(nameof(info));
+            Parser = parser ?? throw new ArgumentNullException(nameof(parser));
+            _binder = binder ?? throw new ArgumentNullException(nameof(binder));
+        }
+
+        public string Name => _info.Name;
+        public string Description => _info.Description;
+
+        public IParser<T> Parser { get; }
+
+        public Func<IReader> ReaderFactory => _info.ReaderFactory;
+
+        ListArg<T> WithInfo(ArgInfo value) =>
+            value == _info ? this : new ListArg<T>(value, Parser, _binder);
+
+        public ListArg<T> WithName(string value) =>
+            WithInfo(_info.WithName(value));
+
+        public ListArg<T> WithDescription(string value) =>
+            WithInfo(_info.WithDescription(value));
+
+        public ImmutableArray<T> Bind(Func<IArg, IReader> source) =>
             _binder(source(_info));
 
         public void Inspect(ICollection<IArg> args) => args.Add(_info);
@@ -95,62 +134,94 @@ namespace Largs
     static partial class Arg
     {
         public static Arg<bool> Flag(string name) =>
-            new ArgInfo(Reader.Flag(), name).ToArg(v => (bool?)v ?? false);
+            new ArgInfo(Reader.Flag, name).ToArg(Parser.Create<bool>(_ => throw new NotSupportedException()), r => r.HasValue);
 
         public static Arg<T> Value<T>(string name, T @default, IParser<T> parser) =>
-            new ArgInfo(Reader.Value(parser), name).ToArg(v => v == null ? @default : (T)v);
+            new ArgInfo(() => Reader.Value(parser), name).ToArg(parser, r => r.HasValue ? ((IReader<T>)r).Value : @default);
 
         public static Arg<T> Value<T>(string name, IParser<T> parser) =>
             Value(name, default, parser);
 
-        public static Arg<ImmutableArray<T>> List<T>(this Arg<T> arg) =>
-            arg.WithReader(new ArrayReader<T>(arg.Reader), v => (ImmutableArray<T>?)v ?? ImmutableArray<T>.Empty);
+        public static ListArg<T> List<T>(this Arg<T> arg) =>
+            new ListArg<T>(new ArgInfo(() => new ArrayReader<T>(arg), arg.Name, arg.Description), arg.Parser, r => ((ArrayReader<T>)r).Value.ToImmutable());
 
-        sealed class ArrayReader<T> : IReader
+        sealed class ArrayReader<T> : IReader<ImmutableArray<T>.Builder>
         {
-            readonly IReader _reader;
-            ImmutableArray<T> _array = ImmutableArray<T>.Empty;
+            readonly Arg<T> _arg;
 
-            public ArrayReader(IReader reader) => _reader = reader;
+            public ArrayReader(Arg<T> arg) => _arg = arg;
 
-            public ParseResult<object> Read(IEnumerator<string> arg) =>
-                _reader.Read(arg) switch
-                {
-                    (true, var value) => ParseResult.Success<object>(_array = _array.Add((T)value)),
-                    _ => default
-                };
+            public bool HasValue => true;
+
+            public ImmutableArray<T>.Builder Value { get; } = ImmutableArray.CreateBuilder<T>();
+
+            object IReader.Value => Value;
+
+            public bool Read(IEnumerator<string> arg)
+            {
+                var reader = _arg.ReaderFactory();
+                if (!reader.Read(arg))
+                    return false;
+                Value.Add(_arg.Bind(_ => reader));
+                return true;
+            }
         }
     }
 
     partial interface IReader
     {
-        ParseResult<object> Read(IEnumerator<string> arg);
+        bool HasValue { get; }
+        object Value { get; }
+        bool Read(IEnumerator<string> arg);
+    }
+
+    partial interface IReader<out T> : IReader
+    {
+        new T Value { get; }
     }
 
     partial interface IArgBinder<out T>
     {
-        T Bind(Func<IArg, object> source);
+        T Bind(Func<IArg, IReader> source);
         void Inspect(ICollection<IArg> args);
     }
 
     static partial class Reader
     {
-        public static IReader Value(IParser parser) =>
-            new DelegatingReader(arg => !arg.MoveNext() ? default : parser.Parse(arg.Current));
+        public static IReader<T> Value<T>(IParser<T> parser) =>
+            new ValueReader<T>(default, (_, arg) => !arg.MoveNext() ? default : parser.Parse(arg.Current));
 
-        static readonly object TrueObject = true;
+        public static IReader<int> Flag() =>
+            new ValueReader<int>(0, (count, _) => ParseResult.Success(count + 1));
 
-        public static IReader Flag() =>
-            new DelegatingReader(arg => ParseResult.Success(TrueObject));
-
-        sealed class DelegatingReader : IReader
+        sealed class ValueReader<T> : IReader<T>
         {
-            readonly Func<IEnumerator<string>, ParseResult<object>> _reader;
+            public bool HasValue { get; private set; }
+            public T Value { get; private set; }
 
-            public DelegatingReader(Func<IEnumerator<string>, ParseResult<object>> reader) =>
+            object IReader.Value => Value;
+
+            readonly Func<T, IEnumerator<string>, ParseResult<T>> _reader;
+
+            public ValueReader(T initial, Func<T, IEnumerator<string>, ParseResult<T>> reader)
+            {
+                Value = initial;
                 _reader = reader ?? throw new ArgumentNullException(nameof(reader));
+            }
 
-            public ParseResult<object> Read(IEnumerator<string> arg) => _reader(arg);
+            public bool Read(IEnumerator<string> arg)
+            {
+                switch (_reader(Value, arg))
+                {
+                    case (true, var value):
+                        HasValue = true;
+                        Value = value;
+                        return true;
+                    default:
+                        Value = default;
+                        return false;
+                }
+            }
         }
     }
 
@@ -174,7 +245,9 @@ namespace Largs
         {
             var infos = new List<IArg>();
             binder.Inspect(infos);
-            var values = new object[infos.Count];
+            var values = new IReader[infos.Count];
+            for (var i = 0; i < infos.Count; i++)
+                values[i] = infos[i].CreateReader();
             using var e = args.AsEnumerable().GetEnumerator();
             var tail = new List<string>();
             while (e.MoveNext())
@@ -190,17 +263,15 @@ namespace Largs
                 else
                 {
                     var i = infos.FindIndex(e => e.Name == name);
-                    var (success, value) = infos[i].Reader.Read(e);
-                    if (!success)
+                    if (!values[i].Read(e))
                         throw new Exception("Invalid value for argument: " + name);
-                    values[i] = value;
                 }
             }
 
             return (binder.Bind(info => values[infos.IndexOf(info)]), tail.ToImmutableArray());
         }
 
-        public static IArgBinder<T> Create<T>(Func<Func<IArg, object>, T> binder, Action<ICollection<IArg>> inspector) =>
+        public static IArgBinder<T> Create<T>(Func<Func<IArg, IReader>, T> binder, Action<ICollection<IArg>> inspector) =>
             new DelegatingArgBinder<T>(binder, inspector);
 
         public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
@@ -225,17 +296,17 @@ namespace Largs
 
         sealed class DelegatingArgBinder<T> : IArgBinder<T>
         {
-            readonly Func<Func<IArg, object>, T> _binder;
+            readonly Func<Func<IArg, IReader>, T> _binder;
             readonly Action<ICollection<IArg>> _inspector;
 
-            public DelegatingArgBinder(Func<Func<IArg, object>, T> binder,
+            public DelegatingArgBinder(Func<Func<IArg, IReader>, T> binder,
                                        Action<ICollection<IArg>> inspector)
             {
                 _binder = binder;
                 _inspector = inspector;
             }
 
-            public T Bind(Func<IArg, object> source) =>
+            public T Bind(Func<IArg, IReader> source) =>
                 _binder(source);
 
             public void Inspect(ICollection<IArg> args) =>
