@@ -438,7 +438,7 @@ namespace Largs
             return true;
         }
 
-        public void Unread(T item) => _next = _next switch
+        void Unread(T item) => _next = _next switch
         {
             (true, _) => throw new InvalidOperationException(),
             _ => (true, item)
