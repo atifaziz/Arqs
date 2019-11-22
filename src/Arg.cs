@@ -131,7 +131,7 @@ namespace Largs
         public void Inspect(ICollection<IArg> args) => args.Add(_info);
     }
 
-    static partial class Arg
+    static partial class CommandLine
     {
         public static Arg<bool> Flag(string name) =>
             new ArgInfo(Reader.Flag, name).ToArg(Parser.Create<bool>(_ => throw new NotSupportedException()), r => r.HasValue);
