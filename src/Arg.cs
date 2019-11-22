@@ -19,7 +19,6 @@ namespace Largs
     using System;
     using System.Collections.Generic;
     using System.Collections.Immutable;
-    using System.Linq;
     using Unit = System.ValueTuple;
 
     partial interface IArg
@@ -139,12 +138,66 @@ namespace Largs
 
             object IReader.Value => Value;
 
-            public bool Read(IEnumerator<string> arg)
+            public bool Read(Reader<string> arg)
             {
                 var reader = _arg.CreateReader();
                 if (!reader.Read(arg))
                     return false;
                 Value.Add(_arg.Bind(_ => reader));
+                return true;
+            }
+        }
+    }
+
+    partial class TailArg<T> : IArg, IArgBinder<ImmutableArray<T>>
+    {
+        readonly Arg<T> _arg;
+
+        public TailArg(Arg<T> arg) =>
+            _arg = arg ?? throw new ArgumentNullException(nameof(arg));
+
+        public string Name => _arg.Name;
+        public string Description => _arg.Description;
+
+        public IParser<T> ItemParser => _arg.Parser;
+
+        public IReader CreateReader() => new Reader(_arg);
+
+        TailArg<T> WithArg(Arg<T> value) =>
+            value == _arg ? this : new TailArg<T>(value);
+
+        public TailArg<T> WithName(string value) =>
+            WithArg(_arg.WithName(value));
+
+        public TailArg<T> WithDescription(string value) =>
+            WithArg(_arg.WithDescription(value));
+
+        public ImmutableArray<T> Bind(Func<IArg, IReader> source) =>
+            ((Reader)source(this)).Value.ToImmutable();
+
+        public void Inspect(ICollection<IArg> args) => args.Add(this);
+
+        sealed class Reader : IReader<ImmutableArray<T>.Builder>
+        {
+            readonly Arg<T> _arg;
+
+            public Reader(Arg<T> arg) => _arg = arg;
+
+            public bool HasValue => true;
+
+            public ImmutableArray<T>.Builder Value { get; } = ImmutableArray.CreateBuilder<T>();
+
+            object IReader.Value => Value;
+
+            public bool Read(Reader<string> arg)
+            {
+                while (arg.HasMore())
+                {
+                    var reader = _arg.CreateReader();
+                    if (!reader.Read(arg))
+                        return false;
+                    Value.Add(_arg.Bind(_ => reader));
+                }
                 return true;
             }
         }
@@ -162,10 +215,13 @@ namespace Largs
             Option(name, default, parser);
 
         public static Arg<T> Arg<T>(string name, T @default, IParser<T> parser) =>
-            new ArgInfo().ToArg(parser, () => Reader.Spot(parser), r => r.HasValue ? ((IReader<T>)r).Value : @default);
+            new ArgInfo().ToArg(parser, () => Reader.Value(parser), r => r.HasValue ? ((IReader<T>)r).Value : @default);
 
         public static Arg<T> Arg<T>(string name, IParser<T> parser) =>
             Arg(name, default, parser);
+
+        public static TailArg<T> Tail<T>(this Arg<T> arg) =>
+            new TailArg<T>(arg);
 
         public static ListArg<T> List<T>(this Arg<T> arg) =>
             new ListArg<T>(arg);
@@ -175,7 +231,7 @@ namespace Largs
     {
         bool HasValue { get; }
         object Value { get; }
-        bool Read(IEnumerator<string> arg);
+        bool Read(Reader<string> arg);
     }
 
     partial interface IReader<out T> : IReader
@@ -192,13 +248,10 @@ namespace Largs
     static partial class Reader
     {
         public static IReader<T> Value<T>(IParser<T> parser) =>
-            new ValueReader<T>(default, (_, arg) => !arg.MoveNext() ? default : parser.Parse(arg.Current));
+            new ValueReader<T>(default, (_, arg) => arg.TryRead(out var v) ? parser.Parse(v) : default);
 
         public static IReader<int> Flag() =>
             new ValueReader<int>(0, (count, _) => ParseResult.Success(count + 1));
-
-        public static IReader<T> Spot<T>(IParser<T> parser) =>
-            new ValueReader<T>(default, (_, arg) => parser.Parse(arg.Current));
 
         sealed class ValueReader<T> : IReader<T>
         {
@@ -207,15 +260,15 @@ namespace Largs
 
             object IReader.Value => Value;
 
-            readonly Func<T, IEnumerator<string>, ParseResult<T>> _reader;
+            readonly Func<T, Reader<string>, ParseResult<T>> _reader;
 
-            public ValueReader(T initial, Func<T, IEnumerator<string>, ParseResult<T>> reader)
+            public ValueReader(T initial, Func<T, Reader<string>, ParseResult<T>> reader)
             {
                 Value = initial;
                 _reader = reader ?? throw new ArgumentNullException(nameof(reader));
             }
 
-            public bool Read(IEnumerator<string> arg)
+            public bool Read(Reader<string> arg)
             {
                 switch (_reader(Value, arg))
                 {
@@ -255,11 +308,10 @@ namespace Largs
             var values = new IReader[infos.Count];
             for (var i = 0; i < infos.Count; i++)
                 values[i] = infos[i].CreateReader();
-            using var e = args.AsEnumerable().GetEnumerator();
+            using var e = new Reader<string>(args);
             var tail = new List<string>();
-            while (e.MoveNext())
+            while (e.TryPeek(out var arg))
             {
-                var arg = e.Current;
                 if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
                     var name = arg.Substring(2);
@@ -268,7 +320,10 @@ namespace Largs
                     {
                         i = infos.FindIndex(asi, e => e.Name == null);
                         if (i < 0)
+                        {
+                            e.Read();
                             tail.Add(arg);
+                        }
                         else
                         {
                             asi = i + 1;
@@ -278,6 +333,7 @@ namespace Largs
                     }
                     else
                     {
+                        e.Read();
                         if (!values[i].Read(e))
                             throw new Exception("Invalid value for option: " + name);
                     }
@@ -289,6 +345,7 @@ namespace Largs
                         var i = infos.FindIndex(e => e.Name.Length == 1 && e.Name[0] == ch);
                         if (i < 0)
                             throw new Exception("Invalid option: " + ch);
+                        e.Read();
                         if (!values[i].Read(e))
                             throw new Exception("Invalid value for option: " + ch);
                     }
@@ -297,7 +354,10 @@ namespace Largs
                 {
                     var i = infos.FindIndex(asi, e => e.Name == null);
                     if (i < 0)
+                    {
+                        e.Read();
                         tail.Add(arg);
+                    }
                     else
                     {
                         asi = i + 1;
@@ -350,6 +410,69 @@ namespace Largs
 
             public void Inspect(ICollection<IArg> args) =>
                 _inspector(args);
+        }
+    }
+
+    sealed partial class Reader<T> : IDisposable
+    {
+        (bool, T) _next;
+        IEnumerator<T> _enumerator;
+
+        public Reader(IEnumerable<T> items) =>
+            _enumerator = items.GetEnumerator();
+
+        public void Dispose()
+        {
+            var args  = _enumerator;
+            _enumerator = null;
+            args?.Dispose();
+        }
+
+        public bool HasMore() => TryPeek(out _);
+
+        public bool TryPeek(out T item)
+        {
+            if (!TryRead(out item))
+                return false;
+            Unread(item);
+            return true;
+        }
+
+        public void Unread(T item) => _next = _next switch
+        {
+            (true, _) => throw new InvalidOperationException(),
+            _ => (true, item)
+        };
+
+        public T Read() =>
+            TryRead(out var item) ? item : throw new InvalidOperationException();
+
+        public bool TryRead(out T item)
+        {
+            switch (_next)
+            {
+                case (true, var next):
+                    _next = default;
+                    item = next;
+                    return true;
+                default:
+                    switch (_enumerator)
+                    {
+                        case null:
+                            item = default;
+                            return false;
+                        case var e:
+                            if (!e.MoveNext())
+                            {
+                                _enumerator.Dispose();
+                                _enumerator = null;
+                                item = default;
+                                return false;
+                            }
+                            item = e.Current;
+                            return true;
+                    }
+            }
         }
     }
 }
