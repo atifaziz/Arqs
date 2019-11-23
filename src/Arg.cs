@@ -90,6 +90,14 @@ namespace Largs
         public Arg<T> WithDescription(string value) =>
             WithInfo(_info.WithDescription(value));
 
+        public Arg<(bool Present, T Value)> FlagPresence() =>
+            FlagPresence(false, true);
+
+        public Arg<(TPresence Presence, T Value)> FlagPresence<TPresence>(TPresence absent, TPresence present) =>
+            new Arg<(TPresence, T)>(_info,
+                                    from v in Parser select (present, v),
+                                    _readerFactory, r => r.HasValue ? (present, _binder(r)) : (absent, default));
+
         public T Bind(Func<IArg, IReader> source) =>
             _binder(source(this));
 
