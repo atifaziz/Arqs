@@ -424,6 +424,7 @@ namespace Largs
     sealed partial class Reader<T> : IDisposable
     {
         (bool, T) _next;
+        Stack<T> _nextItems;
         IEnumerator<T> _enumerator;
 
         public Reader(IEnumerable<T> items) =>
@@ -446,41 +447,59 @@ namespace Largs
             return true;
         }
 
-        void Unread(T item) => _next = _next switch
+        void Unread(T item)
         {
-            (true, _) => throw new InvalidOperationException(),
-            _ => (true, item)
-        };
+            var (hasNext, next) = _next;
+            if (hasNext)
+            {
+                _nextItems = new Stack<T>();
+                _nextItems.Push(next);
+            }
+            else if (_nextItems == null)
+            {
+                _next = (true, item);
+                return;
+            }
+
+            _nextItems.Push(item);
+        }
 
         public T Read() =>
             TryRead(out var item) ? item : throw new InvalidOperationException();
 
         public bool TryRead(out T item)
         {
-            switch (_next)
+            var (hasNext, next) = _next;
+
+            if (hasNext)
             {
-                case (true, var next):
-                    _next = default;
-                    item = next;
-                    return true;
-                default:
-                    switch (_enumerator)
-                    {
-                        case null:
-                            item = default;
-                            return false;
-                        case var e:
-                            if (!e.MoveNext())
-                            {
-                                _enumerator.Dispose();
-                                _enumerator = null;
-                                item = default;
-                                return false;
-                            }
-                            item = e.Current;
-                            return true;
-                    }
+                item = next;
+                _next = default;
+                return true;
             }
+
+            if (_nextItems?.Count > 0)
+            {
+                item = _nextItems.Pop();
+                return true;
+            }
+
+            if (_enumerator == null)
+            {
+                item = default;
+                return false;
+            }
+
+            if (!_enumerator.MoveNext())
+            {
+                _enumerator.Dispose();
+                _enumerator = null;
+                item = default;
+                return false;
+            }
+
+            item = _enumerator.Current;
+            return true;
         }
     }
 }
