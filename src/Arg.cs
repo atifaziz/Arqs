@@ -447,7 +447,7 @@ namespace Largs
             return true;
         }
 
-        void Unread(T item)
+        internal void Unread(T item)
         {
             var (hasNext, next) = _next;
             if (hasNext)
