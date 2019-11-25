@@ -93,5 +93,28 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
         }
+
+        [Test]
+        public void Test3()
+        {
+            var args =
+                from foo  in Args.Option("foo", -1, Parser.Int32()).List()
+                join bar  in Args.Flag("bar").FlagPresence() on 1 equals 1
+                join baz  in Args.Option("baz", Parser.Int32()).FlagPresence() on 1 equals 1
+                select new { Foo = foo, Bar = bar, Baz = baz };
+
+            var commandLine = "--foo 4 --foo 2 --baz 42 --bar".Split();
+            var (result, tail) = args.Bind(commandLine);
+
+            Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
+            Assert.That(result.Bar, Is.EqualTo((true, true)));
+            Assert.That(result.Baz, Is.EqualTo((true, 42)));
+            Assert.That(tail, Is.Empty);
+
+            var infos = new Queue<IArg>(args.Inspect());
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("foo"));
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
+        }
     }
 }
