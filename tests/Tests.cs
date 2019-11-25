@@ -116,5 +116,31 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
         }
+
+        [Test]
+        public void Test4()
+        {
+            var args =
+                from a in Args.Flag("a")
+                join b in Args.Flag("b")  on 1 equals 1
+                join c in Args.Flag("c")  on 1 equals 1
+                join d in Args.Option("d", Parser.Int32()) on 1 equals 1
+                select new { A = a, B = b, C = c, D = d };
+
+            var commandLine = "-acd 42".Split();
+            var (result, tail) = args.Bind(commandLine);
+
+            Assert.That(result.A, Is.True);
+            Assert.That(result.B, Is.False);
+            Assert.That(result.C, Is.True);
+            Assert.That(result.D, Is.EqualTo(42));
+            Assert.That(tail, Is.Empty);
+
+            var infos = new Queue<IArg>(args.Inspect());
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("a"));
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("b"));
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("c"));
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("d"));
+        }
     }
 }

@@ -19,6 +19,7 @@ namespace Largs
     using System;
     using System.Collections.Generic;
     using System.Collections.Immutable;
+    using System.Linq;
     using Unit = System.ValueTuple;
 
     partial interface IArg
@@ -346,10 +347,22 @@ namespace Largs
                             throw new Exception("Invalid value for option: " + name);
                     }
                 }
-                else if (arg.Length > 0 && arg[0] == '-')
+                else if (arg.Length > 1 && arg[0] == '-')
                 {
-                    foreach (var ch in arg.Substring(1))
+                    if (arg.Length > 2)
                     {
+                        e.Read();
+                        foreach (var ch in arg.Substring(1).Reverse())
+                        {
+                            var i = infos.FindIndex(e => e.Name.Length == 1 && e.Name[0] == ch);
+                            if (i < 0)
+                                throw new Exception("Invalid option: " + ch);
+                            e.Unread("-" + ch);
+                        }
+                    }
+                    else
+                    {
+                        var ch = arg[1];
                         var i = infos.FindIndex(e => e.Name.Length == 1 && e.Name[0] == ch);
                         if (i < 0)
                             throw new Exception("Invalid option: " + ch);
