@@ -452,6 +452,7 @@ namespace Largs
             var (hasNext, next) = _next;
             if (hasNext)
             {
+                _next = default;
                 _nextItems = new Stack<T>();
                 _nextItems.Push(next);
             }
