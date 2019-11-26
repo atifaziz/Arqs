@@ -26,7 +26,7 @@ namespace Largs
         string  Name        { get; }
         string  Description { get; }
 
-        IReader CreateReader();
+        IAccumulator CreateAccumulator();
     }
 
     partial class ArgInfo
@@ -56,20 +56,20 @@ namespace Largs
 
         public override string ToString() => Name + String.ConcatAll(": " + Description);
 
-        public Arg<T> ToArg<T>(IParser<T> parser, Func<IReader> readerFactory, Func<IReader, T> binder) =>
-            new Arg<T>(this, parser, readerFactory, binder);
+        public Arg<T> ToArg<T>(IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder) =>
+            new Arg<T>(this, parser, accumulatorFactory, binder);
     }
 
     partial class Arg<T> : IArg, IArgBinder<T>
     {
         readonly ArgInfo _info;
-        readonly Func<IReader> _readerFactory;
-        readonly Func<IReader, T> _binder;
+        readonly Func<IAccumulator> _readerFactory;
+        readonly Func<IAccumulator, T> _binder;
 
-        public Arg(ArgInfo info, IParser<T> parser, Func<IReader> readerFactory, Func<IReader, T> binder)
+        public Arg(ArgInfo info, IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder)
         {
             _info = info ?? throw new ArgumentNullException(nameof(info));
-            _readerFactory = readerFactory ?? throw new ArgumentNullException(nameof(readerFactory));
+            _readerFactory = accumulatorFactory ?? throw new ArgumentNullException(nameof(accumulatorFactory));
             Parser = parser ?? throw new ArgumentNullException(nameof(parser));
             _binder = binder ?? throw new ArgumentNullException(nameof(binder));
         }
@@ -79,7 +79,7 @@ namespace Largs
 
         public IParser<T> Parser { get; }
 
-        public IReader CreateReader() => _readerFactory();
+        public IAccumulator CreateAccumulator() => _readerFactory();
 
         Arg<T> WithInfo(ArgInfo value) =>
             value == _info ? this : new Arg<T>(value, Parser, _readerFactory, _binder);
@@ -98,7 +98,7 @@ namespace Largs
                                     from v in Parser select (present, v),
                                     _readerFactory, r => r.HasValue ? (present, _binder(r)) : (absent, default));
 
-        public T Bind(Func<IArg, IReader> source) =>
+        public T Bind(Func<IArg, IAccumulator> source) =>
             _binder(source(this));
 
         public void Inspect(ICollection<IArg> args) => args.Add(this);
@@ -118,7 +118,7 @@ namespace Largs
 
         public IParser<T> ItemParser => _arg.Parser;
 
-        public IReader CreateReader() => new Reader(_arg);
+        public IAccumulator CreateAccumulator() => new Accumulator(_arg);
 
         ListArg<T> WithArg(Arg<T> value) =>
             value == _arg ? this : new ListArg<T>(value);
@@ -129,26 +129,26 @@ namespace Largs
         public ListArg<T> WithDescription(string value) =>
             WithArg(_arg.WithDescription(value));
 
-        public ImmutableArray<T> Bind(Func<IArg, IReader> source) =>
-            ((Reader)source(this)).Value.ToImmutable();
+        public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
+            ((Accumulator)source(this)).Value.ToImmutable();
 
         public void Inspect(ICollection<IArg> args) => args.Add(this);
 
-        sealed class Reader : IReader<ImmutableArray<T>.Builder>
+        sealed class Accumulator : IAccumulator<ImmutableArray<T>.Builder>
         {
             readonly Arg<T> _arg;
 
-            public Reader(Arg<T> arg) => _arg = arg;
+            public Accumulator(Arg<T> arg) => _arg = arg;
 
             public bool HasValue => true;
 
             public ImmutableArray<T>.Builder Value { get; } = ImmutableArray.CreateBuilder<T>();
 
-            object IReader.Value => Value;
+            object IAccumulator.Value => Value;
 
             public bool Read(Reader<string> arg)
             {
-                var reader = _arg.CreateReader();
+                var reader = _arg.CreateAccumulator();
                 if (!reader.Read(arg))
                     return false;
                 Value.Add(_arg.Bind(_ => reader));
@@ -169,7 +169,7 @@ namespace Largs
 
         public IParser<T> ItemParser => _arg.Parser;
 
-        public IReader CreateReader() => new Reader(_arg);
+        public IAccumulator CreateAccumulator() => new Accumulator(_arg);
 
         TailArg<T> WithArg(Arg<T> value) =>
             value == _arg ? this : new TailArg<T>(value);
@@ -180,28 +180,28 @@ namespace Largs
         public TailArg<T> WithDescription(string value) =>
             WithArg(_arg.WithDescription(value));
 
-        public ImmutableArray<T> Bind(Func<IArg, IReader> source) =>
-            ((Reader)source(this)).Value.ToImmutable();
+        public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
+            ((Accumulator)source(this)).Value.ToImmutable();
 
         public void Inspect(ICollection<IArg> args) => args.Add(this);
 
-        sealed class Reader : IReader<ImmutableArray<T>.Builder>
+        sealed class Accumulator : IAccumulator<ImmutableArray<T>.Builder>
         {
             readonly Arg<T> _arg;
 
-            public Reader(Arg<T> arg) => _arg = arg;
+            public Accumulator(Arg<T> arg) => _arg = arg;
 
             public bool HasValue => true;
 
             public ImmutableArray<T>.Builder Value { get; } = ImmutableArray.CreateBuilder<T>();
 
-            object IReader.Value => Value;
+            object IAccumulator.Value => Value;
 
             public bool Read(Reader<string> arg)
             {
                 while (arg.HasMore())
                 {
-                    var reader = _arg.CreateReader();
+                    var reader = _arg.CreateAccumulator();
                     if (!reader.Read(arg))
                         return false;
                     Value.Add(_arg.Bind(_ => reader));
@@ -214,16 +214,16 @@ namespace Largs
     static partial class Args
     {
         public static Arg<bool> Flag(string name) =>
-            new ArgInfo(name).ToArg(Parser.Create<bool>(_ => throw new NotSupportedException()), Reader.Flag, r => r.HasValue);
+            new ArgInfo(name).ToArg(Parser.Create<bool>(_ => throw new NotSupportedException()), Accumulator.Flag, r => r.HasValue);
 
         public static Arg<T> Option<T>(string name, T @default, IParser<T> parser) =>
-            new ArgInfo(name).ToArg(parser, () => Reader.Value(parser), r => r.HasValue ? ((IReader<T>)r).Value : @default);
+            new ArgInfo(name).ToArg(parser, () => Accumulator.Value(parser), r => r.HasValue ? ((IAccumulator<T>)r).Value : @default);
 
         public static Arg<T> Option<T>(string name, IParser<T> parser) =>
             Option(name, default, parser);
 
         public static Arg<T> Arg<T>(string name, T @default, IParser<T> parser) =>
-            new ArgInfo().ToArg(parser, () => Reader.Value(parser), r => r.HasValue ? ((IReader<T>)r).Value : @default);
+            new ArgInfo().ToArg(parser, () => Accumulator.Value(parser), r => r.HasValue ? ((IAccumulator<T>)r).Value : @default);
 
         public static Arg<T> Arg<T>(string name, IParser<T> parser) =>
             Arg(name, default, parser);
@@ -235,42 +235,42 @@ namespace Largs
             new ListArg<T>(arg);
     }
 
-    partial interface IReader
+    partial interface IAccumulator
     {
         bool HasValue { get; }
         object Value { get; }
         bool Read(Reader<string> arg);
     }
 
-    partial interface IReader<out T> : IReader
+    partial interface IAccumulator<out T> : IAccumulator
     {
         new T Value { get; }
     }
 
     partial interface IArgBinder<out T>
     {
-        T Bind(Func<IArg, IReader> source);
+        T Bind(Func<IArg, IAccumulator> source);
         void Inspect(ICollection<IArg> args);
     }
 
-    static partial class Reader
+    static partial class Accumulator
     {
-        public static IReader<T> Value<T>(IParser<T> parser) =>
-            new ValueReader<T>(default, (_, arg) => arg.TryRead(out var v) ? parser.Parse(v) : default);
+        public static IAccumulator<T> Value<T>(IParser<T> parser) =>
+            new ValueAccumulator<T>(default, (_, arg) => arg.TryRead(out var v) ? parser.Parse(v) : default);
 
-        public static IReader<int> Flag() =>
-            new ValueReader<int>(0, (count, _) => ParseResult.Success(count + 1));
+        public static IAccumulator<int> Flag() =>
+            new ValueAccumulator<int>(0, (count, _) => ParseResult.Success(count + 1));
 
-        sealed class ValueReader<T> : IReader<T>
+        sealed class ValueAccumulator<T> : IAccumulator<T>
         {
             public bool HasValue { get; private set; }
             public T Value { get; private set; }
 
-            object IReader.Value => Value;
+            object IAccumulator.Value => Value;
 
             readonly Func<T, Reader<string>, ParseResult<T>> _reader;
 
-            public ValueReader(T initial, Func<T, Reader<string>, ParseResult<T>> reader)
+            public ValueAccumulator(T initial, Func<T, Reader<string>, ParseResult<T>> reader)
             {
                 Value = initial;
                 _reader = reader ?? throw new ArgumentNullException(nameof(reader));
@@ -311,9 +311,9 @@ namespace Largs
             var infos = new List<IArg>();
             binder.Inspect(infos);
             var asi = 0;
-            var values = new IReader[infos.Count];
+            var values = new IAccumulator[infos.Count];
             for (var i = 0; i < infos.Count; i++)
-                values[i] = infos[i].CreateReader();
+                values[i] = infos[i].CreateAccumulator();
             using var e = new Reader<string>(args);
             var tail = new List<string>();
             while (e.TryPeek(out var arg))
@@ -388,7 +388,7 @@ namespace Largs
             return (binder.Bind(info => values[infos.IndexOf(info)]), tail.ToImmutableArray());
         }
 
-        public static IArgBinder<T> Create<T>(Func<Func<IArg, IReader>, T> binder, Action<ICollection<IArg>> inspector) =>
+        public static IArgBinder<T> Create<T>(Func<Func<IArg, IAccumulator>, T> binder, Action<ICollection<IArg>> inspector) =>
             new DelegatingArgBinder<T>(binder, inspector);
 
         public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
@@ -413,17 +413,17 @@ namespace Largs
 
         sealed class DelegatingArgBinder<T> : IArgBinder<T>
         {
-            readonly Func<Func<IArg, IReader>, T> _binder;
+            readonly Func<Func<IArg, IAccumulator>, T> _binder;
             readonly Action<ICollection<IArg>> _inspector;
 
-            public DelegatingArgBinder(Func<Func<IArg, IReader>, T> binder,
+            public DelegatingArgBinder(Func<Func<IArg, IAccumulator>, T> binder,
                                        Action<ICollection<IArg>> inspector)
             {
                 _binder = binder;
                 _inspector = inspector;
             }
 
-            public T Bind(Func<IArg, IReader> source) =>
+            public T Bind(Func<IArg, IAccumulator> source) =>
                 _binder(source);
 
             public void Inspect(ICollection<IArg> args) =>

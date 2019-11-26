@@ -6,8 +6,8 @@ namespace Largs
     public partial class ListArg<T> { }
     public partial class TailArg<T> { }
     public partial class ArgInfo {}
-    public partial interface IReader {}
-    public partial interface IReader<out T> {}
+    public partial interface IAccumulator {}
+    public partial interface IAccumulator<out T> {}
     public partial interface IArgBinder<out T> {}
     public partial class ArgBinder {}
     public partial class Reader<T> {}
