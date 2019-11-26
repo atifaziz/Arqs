@@ -20,7 +20,7 @@ namespace Largs
     using System.Collections.Generic;
     using System.Collections.Immutable;
 
-    partial interface IArg
+    public interface IArg
     {
         string  Name        { get; }
         string  Description { get; }
@@ -28,7 +28,7 @@ namespace Largs
         IAccumulator CreateAccumulator();
     }
 
-    partial class ArgInfo
+    public class ArgInfo
     {
         public ArgInfo() :
             this(null)  {}
@@ -59,7 +59,7 @@ namespace Largs
             new Arg<T>(this, parser, accumulatorFactory, binder);
     }
 
-    partial class Arg<T> : IArg, IArgBinder<T>
+    public class Arg<T> : IArg, IArgBinder<T>
     {
         readonly ArgInfo _info;
         readonly Func<IAccumulator> _readerFactory;
@@ -103,7 +103,7 @@ namespace Largs
         public void Inspect(ICollection<IArg> args) => args.Add(this);
     }
 
-    partial class ListArg<T> : IArg, IArgBinder<ImmutableArray<T>>
+    public class ListArg<T> : IArg, IArgBinder<ImmutableArray<T>>
     {
         readonly Arg<T> _arg;
 
@@ -156,7 +156,7 @@ namespace Largs
         }
     }
 
-    partial class TailArg<T> : IArg, IArgBinder<ImmutableArray<T>>
+    public class TailArg<T> : IArg, IArgBinder<ImmutableArray<T>>
     {
         readonly Arg<T> _arg;
 
@@ -210,7 +210,7 @@ namespace Largs
         }
     }
 
-    static partial class Args
+    public static class Args
     {
         public static Arg<bool> Flag(string name) =>
             new ArgInfo(name).ToArg(Parser.Create<bool>(_ => throw new NotSupportedException()), Accumulator.Flag, r => r.HasValue);

@@ -18,19 +18,19 @@ namespace Largs
 {
     using System;
 
-    partial interface IAccumulator
+    public interface IAccumulator
     {
         bool HasValue { get; }
         object Value { get; }
         bool Read(Reader<string> arg);
     }
 
-    partial interface IAccumulator<out T> : IAccumulator
+    public interface IAccumulator<out T> : IAccumulator
     {
         new T Value { get; }
     }
 
-    static partial class Accumulator
+    public static class Accumulator
     {
         public static IAccumulator<T> Value<T>(IParser<T> parser) =>
             new ValueAccumulator<T>(default, (_, arg) => arg.TryRead(out var v) ? parser.Parse(v) : default);

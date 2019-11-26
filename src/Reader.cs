@@ -19,7 +19,7 @@ namespace Largs
     using System;
     using System.Collections.Generic;
 
-    sealed partial class Reader<T> : IDisposable
+    public sealed class Reader<T> : IDisposable
     {
         (bool, T) _next;
         Stack<T> _nextItems;

@@ -21,13 +21,13 @@ namespace Largs
     using System.Collections.Immutable;
     using System.Linq;
 
-    partial interface IArgBinder<out T>
+    public interface IArgBinder<out T>
     {
         T Bind(Func<IArg, IAccumulator> source);
         void Inspect(ICollection<IArg> args);
     }
 
-    static partial class ArgBinder
+    public static class ArgBinder
     {
         public static IList<IArg> Inspect<T>(this IArgBinder<T> binder)
         {

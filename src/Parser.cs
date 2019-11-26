@@ -22,7 +22,7 @@ namespace Largs
     using System.Globalization;
     using System.Linq;
 
-    readonly partial struct ParseResult<T> : IEquatable<ParseResult<T>>
+    public readonly struct ParseResult<T> : IEquatable<ParseResult<T>>
     {
         public ParseResult(T value) =>
             (Success, Value) = (true, value);
@@ -55,28 +55,28 @@ namespace Largs
             (success, value) = (Success, Value);
     }
 
-    static partial class ParseResult
+    public static class ParseResult
     {
         public static ParseResult<T> Success<T>(T value) => new ParseResult<T>(value);
     }
 
-    partial interface IParser
+    public interface IParser
     {
         ParseResult<object> Parse(string text);
     }
 
-    partial interface IParser<T> : IParser
+    public interface IParser<T> : IParser
     {
         new ParseResult<T> Parse(string text);
     }
 
-    partial interface IParser<T, TOptions> : IParser<T>
+    public interface IParser<T, TOptions> : IParser<T>
     {
         TOptions Options { get; }
         IParser<T, TOptions> WithOptions(TOptions value);
     }
 
-    partial class GlobalParseOptions
+    public class GlobalParseOptions
     {
         public GlobalParseOptions(IFormatProvider formatProvider) =>
             FormatProvider = formatProvider;
@@ -93,7 +93,7 @@ namespace Largs
             formatProvider == FormatProvider ? this : new GlobalParseOptions(formatProvider);
     }
 
-    partial class NumberParseOptions : GlobalParseOptions
+    public class NumberParseOptions : GlobalParseOptions
     {
         public NumberParseOptions(NumberStyles styles, IFormatProvider formatProvider) :
             base(formatProvider) => Styles = styles;
@@ -116,7 +116,7 @@ namespace Largs
             UpdateCore(Styles, formatProvider);
     }
 
-    partial class DateTimeParseOptions : GlobalParseOptions
+    public class DateTimeParseOptions : GlobalParseOptions
     {
         string[] _cachedFormatsArray;
 
@@ -156,7 +156,7 @@ namespace Largs
             DateTime.TryParseExact(s, CachedFormatsArray, FormatProvider, Styles, out var v) ? ParseResult.Success(v) : default;
     }
 
-    static partial class Parser
+    public static class Parser
     {
         static class Parsers
         {
