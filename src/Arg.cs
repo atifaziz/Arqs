@@ -235,61 +235,10 @@ namespace Largs
             new ListArg<T>(arg);
     }
 
-    partial interface IAccumulator
-    {
-        bool HasValue { get; }
-        object Value { get; }
-        bool Read(Reader<string> arg);
-    }
-
-    partial interface IAccumulator<out T> : IAccumulator
-    {
-        new T Value { get; }
-    }
-
     partial interface IArgBinder<out T>
     {
         T Bind(Func<IArg, IAccumulator> source);
         void Inspect(ICollection<IArg> args);
-    }
-
-    static partial class Accumulator
-    {
-        public static IAccumulator<T> Value<T>(IParser<T> parser) =>
-            new ValueAccumulator<T>(default, (_, arg) => arg.TryRead(out var v) ? parser.Parse(v) : default);
-
-        public static IAccumulator<int> Flag() =>
-            new ValueAccumulator<int>(0, (count, _) => ParseResult.Success(count + 1));
-
-        sealed class ValueAccumulator<T> : IAccumulator<T>
-        {
-            public bool HasValue { get; private set; }
-            public T Value { get; private set; }
-
-            object IAccumulator.Value => Value;
-
-            readonly Func<T, Reader<string>, ParseResult<T>> _reader;
-
-            public ValueAccumulator(T initial, Func<T, Reader<string>, ParseResult<T>> reader)
-            {
-                Value = initial;
-                _reader = reader ?? throw new ArgumentNullException(nameof(reader));
-            }
-
-            public bool Read(Reader<string> arg)
-            {
-                switch (_reader(Value, arg))
-                {
-                    case (true, var value):
-                        HasValue = true;
-                        Value = value;
-                        return true;
-                    default:
-                        Value = default;
-                        return false;
-                }
-            }
-        }
     }
 
     static partial class ArgBinder
