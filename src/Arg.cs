@@ -20,7 +20,6 @@ namespace Largs
     using System.Collections.Generic;
     using System.Collections.Immutable;
     using System.Linq;
-    using Unit = System.ValueTuple;
 
     partial interface IArg
     {
@@ -295,8 +294,6 @@ namespace Largs
 
     static partial class ArgBinder
     {
-        public static readonly IArgBinder<Unit> Nop = Create<Unit>(_ => default, delegate {});
-
         public static IList<IArg> Inspect<T>(this IArgBinder<T> binder)
         {
             var infos = new List<IArg>();
