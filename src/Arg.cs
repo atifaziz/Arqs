@@ -22,78 +22,43 @@ namespace Largs
 
     public interface IArg
     {
-        string  Name        { get; }
-        string  Description { get; }
-
+        PropertySet Properties { get; }
+        IArg WithProperties(PropertySet value);
         IAccumulator CreateAccumulator();
-    }
-
-    public class ArgInfo
-    {
-        public ArgInfo() :
-            this(null)  {}
-
-        public ArgInfo(string name, string description = null)
-        {
-            Name          = name;
-            Description   = description;
-        }
-
-        public string   Name        { get; }
-        public string   Description { get; }
-
-        public ArgInfo WithName(string value)
-            => value == null ? throw new ArgumentNullException(nameof(value))
-             : value == Name ? this
-             : UpdateCore(value, Description);
-
-        public ArgInfo WithDescription(string value) =>
-            value == Description ? this : UpdateCore(Name, value);
-
-        protected virtual ArgInfo UpdateCore(string name, string description) =>
-            new ArgInfo(name, description);
-
-        public override string ToString() => Name + String.ConcatAll(": " + Description);
-
-        public Arg<T> ToArg<T>(IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder) =>
-            new Arg<T>(this, parser, accumulatorFactory, binder);
     }
 
     public class Arg<T> : IArg, IArgBinder<T>
     {
-        readonly ArgInfo _info;
         readonly Func<IAccumulator> _readerFactory;
         readonly Func<IAccumulator, T> _binder;
 
-        public Arg(ArgInfo info, IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder)
+        public Arg(IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder) :
+            this(PropertySet.Empty, parser, accumulatorFactory, binder) {}
+
+        public Arg(PropertySet properties, IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder)
         {
-            _info = info ?? throw new ArgumentNullException(nameof(info));
+            Properties = properties ?? throw new ArgumentNullException(nameof(properties));
             _readerFactory = accumulatorFactory ?? throw new ArgumentNullException(nameof(accumulatorFactory));
             Parser = parser ?? throw new ArgumentNullException(nameof(parser));
             _binder = binder ?? throw new ArgumentNullException(nameof(binder));
         }
 
-        public string  Name        => _info.Name;
-        public string  Description => _info.Description;
+        public PropertySet Properties { get; }
+
+        IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
+
+        public Arg<T> WithProperties(PropertySet value) =>
+            Properties == value ? this : new Arg<T>(value, Parser, _readerFactory, _binder);
 
         public IParser<T> Parser { get; }
 
         public IAccumulator CreateAccumulator() => _readerFactory();
 
-        Arg<T> WithInfo(ArgInfo value) =>
-            value == _info ? this : new Arg<T>(value, Parser, _readerFactory, _binder);
-
-        public Arg<T> WithName(string value) =>
-            WithInfo(_info.WithName(value));
-
-        public Arg<T> WithDescription(string value) =>
-            WithInfo(_info.WithDescription(value));
-
         public Arg<(bool Present, T Value)> FlagPresence() =>
             FlagPresence(false, true);
 
         public Arg<(TPresence Presence, T Value)> FlagPresence<TPresence>(TPresence absent, TPresence present) =>
-            new Arg<(TPresence, T)>(_info,
+            new Arg<(TPresence, T)>(Properties,
                                     from v in Parser select (present, v),
                                     _readerFactory, r => r.HasValue ? (present, _binder(r)) : (absent, default));
 
@@ -107,26 +72,24 @@ namespace Largs
     {
         readonly Arg<T> _arg;
 
-        public ListArg(Arg<T> arg)
+        public ListArg(Arg<T> arg) : this(arg?.Properties, arg) {}
+
+        public ListArg(PropertySet properties, Arg<T> arg)
         {
             _arg = arg ?? throw new ArgumentNullException(nameof(arg));
+            Properties = properties ?? throw new ArgumentNullException(nameof(properties));
         }
 
-        public string Name => _arg.Name;
-        public string Description => _arg.Description;
+        public PropertySet Properties { get; }
+
+        IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
+
+        public ListArg<T> WithProperties(PropertySet value) =>
+            Properties == value ? this : new ListArg<T>(value, _arg);
 
         public IParser<T> ItemParser => _arg.Parser;
 
         public IAccumulator CreateAccumulator() => new Accumulator(_arg);
-
-        ListArg<T> WithArg(Arg<T> value) =>
-            value == _arg ? this : new ListArg<T>(value);
-
-        public ListArg<T> WithName(string value) =>
-            WithArg(_arg.WithName(value));
-
-        public ListArg<T> WithDescription(string value) =>
-            WithArg(_arg.WithDescription(value));
 
         public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
             ((Accumulator)source(this)).Value.ToImmutable();
@@ -160,24 +123,24 @@ namespace Largs
     {
         readonly Arg<T> _arg;
 
-        public TailArg(Arg<T> arg) =>
-            _arg = arg ?? throw new ArgumentNullException(nameof(arg));
+        public TailArg(Arg<T> arg) : this(arg?.Properties, arg) { }
 
-        public string Name => _arg.Name;
-        public string Description => _arg.Description;
+        public TailArg(PropertySet properties, Arg<T> arg)
+        {
+            _arg = arg ?? throw new ArgumentNullException(nameof(arg));
+            Properties = properties ?? throw new ArgumentNullException(nameof(properties));
+        }
+
+        public PropertySet Properties { get; }
+
+        IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
+
+        public TailArg<T> WithProperties(PropertySet value) =>
+            Properties == value ? this : new TailArg<T>(value, _arg);
 
         public IParser<T> ItemParser => _arg.Parser;
 
         public IAccumulator CreateAccumulator() => new Accumulator(_arg);
-
-        TailArg<T> WithArg(Arg<T> value) =>
-            value == _arg ? this : new TailArg<T>(value);
-
-        public TailArg<T> WithName(string value) =>
-            WithArg(_arg.WithName(value));
-
-        public TailArg<T> WithDescription(string value) =>
-            WithArg(_arg.WithDescription(value));
 
         public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
             ((Accumulator)source(this)).Value.ToImmutable();
@@ -210,19 +173,48 @@ namespace Largs
         }
     }
 
+    public static class Arg
+    {
+        public static class Symbols
+        {
+            public static readonly Symbol Name        = Symbol.New(nameof(Name));
+            public static readonly Symbol Description = Symbol.New(nameof(Description));
+        }
+
+        public static class Properties
+        {
+            public static readonly Property Name        = Property.Writable(Symbols.Name);
+            public static readonly Property Description = Property.Writable(Symbols.Description);
+        }
+
+        public static string Name(this IArg arg) =>
+            (string)arg.Properties[Properties.Name];
+
+        public static T WithName<T>(this T arg, string value) where T : IArg =>
+            (T)arg.WithProperties(arg.Properties.With(Properties.Name, value));
+
+        public static string Description(this IArg arg) =>
+            (string)arg.Properties[Properties.Description];
+
+        public static IArg WithDescription<T>(this T arg, string value) where T : IArg =>
+            (T)arg.WithProperties(arg.Properties.With(Properties.Description, value));
+    }
+
     public static class Args
     {
         public static Arg<bool> Flag(string name) =>
-            new ArgInfo(name).ToArg(Parser.Create<bool>(_ => throw new NotSupportedException()), Accumulator.Flag, r => r.HasValue);
+            new Arg<bool>(Parser.Create<bool>(_ => throw new NotSupportedException()), Accumulator.Flag, r => r.HasValue)
+                .WithName(name);
 
         public static Arg<T> Option<T>(string name, T @default, IParser<T> parser) =>
-            new ArgInfo(name).ToArg(parser, () => Accumulator.Value(parser), r => r.HasValue ? ((IAccumulator<T>)r).Value : @default);
+            new Arg<T>(parser, () => Accumulator.Value(parser), r => r.HasValue ? ((IAccumulator<T>)r).Value : @default)
+                .WithName(name);
 
         public static Arg<T> Option<T>(string name, IParser<T> parser) =>
             Option(name, default, parser);
 
         public static Arg<T> Arg<T>(string name, T @default, IParser<T> parser) =>
-            new ArgInfo().ToArg(parser, () => Accumulator.Value(parser), r => r.HasValue ? ((IAccumulator<T>)r).Value : @default);
+            new Arg<T>(parser, () => Accumulator.Value(parser), r => r.HasValue ? ((IAccumulator<T>)r).Value : @default);
 
         public static Arg<T> Arg<T>(string name, IParser<T> parser) =>
             Arg(name, default, parser);

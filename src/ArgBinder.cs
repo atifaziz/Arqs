@@ -79,10 +79,10 @@ namespace Largs
                 if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
                     var name = arg.Substring(2);
-                    var i = infos.FindIndex(e => e.Name == name);
+                    var i = infos.FindIndex(e => e.Name() == name);
                     if (i < 0)
                     {
-                        i = infos.FindIndex(asi, e => e.Name == null);
+                        i = infos.FindIndex(asi, e => e.Name() == null);
                         if (i < 0)
                         {
                             e.Read();
@@ -109,7 +109,7 @@ namespace Largs
                         e.Read();
                         foreach (var ch in arg.Substring(1).Reverse())
                         {
-                            var i = infos.FindIndex(e => e.Name.Length == 1 && e.Name[0] == ch);
+                            var i = infos.FindIndex(e => e.Name().Length == 1 && e.Name()[0] == ch);
                             if (i < 0)
                             {
                                 if (mode == BindMode.Strict)
@@ -125,7 +125,7 @@ namespace Largs
                     else
                     {
                         var ch = arg[1];
-                        var i = infos.FindIndex(e => e.Name.Length == 1 && e.Name[0] == ch);
+                        var i = infos.FindIndex(e => e.Name().Length == 1 && e.Name()[0] == ch);
                         if (i < 0)
                         {
                             if (mode == BindMode.Strict)
@@ -143,7 +143,7 @@ namespace Largs
                 }
                 else
                 {
-                    var i = infos.FindIndex(asi, e => e.Name == null);
+                    var i = infos.FindIndex(asi, e => e.Name() == null);
                     if (i < 0)
                     {
                         e.Read();
