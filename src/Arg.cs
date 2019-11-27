@@ -182,16 +182,28 @@ namespace Largs
         }
 
         public static string Name(this IArg arg) =>
-            (string)arg.Properties[Symbols.Name];
+            arg.Properties.Name();
+
+        public static string Name(this PropertySet properties) =>
+            (string)properties[Symbols.Name];
 
         public static T WithName<T>(this T arg, string value) where T : IArg =>
-            (T)arg.WithProperties(arg.Properties.With(Symbols.Name, value));
+            (T)arg.WithProperties(arg.Properties.WithName(value));
+
+        public static PropertySet WithName(this PropertySet properties, string value) =>
+            properties.With(Symbols.Name, value);
 
         public static string Description(this IArg arg) =>
             (string)arg.Properties[Symbols.Description];
 
+        public static string Description(this PropertySet properties) =>
+            (string)properties[Symbols.Description];
+
         public static IArg WithDescription<T>(this T arg, string value) where T : IArg =>
-            (T)arg.WithProperties(arg.Properties.With(Symbols.Description, value));
+            (T)arg.WithProperties(arg.Properties.WithDescription(value));
+
+        public static PropertySet WithDescription(this PropertySet properties, string value) =>
+            properties.With(Symbols.Description, value);
     }
 
     public static class Args
