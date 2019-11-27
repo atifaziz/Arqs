@@ -33,10 +33,13 @@ namespace Largs
     public static class Accumulator
     {
         public static IAccumulator<T> Value<T>(IParser<T> parser) =>
-            new ValueAccumulator<T>(default, (_, arg) => arg.TryRead(out var v) ? parser.Parse(v) : default);
+            Create<T>(default, (_, arg) => arg.TryRead(out var v) ? parser.Parse(v) : default);
 
         public static IAccumulator<int> Flag() =>
-            new ValueAccumulator<int>(0, (count, _) => ParseResult.Success(count + 1));
+            Create(0, (count, _) => ParseResult.Success(count + 1));
+
+        public static IAccumulator<T> Create<T>(T initial, Func<T, Reader<string>, ParseResult<T>> reader) =>
+            new ValueAccumulator<T>(initial, reader);
 
         sealed class ValueAccumulator<T> : IAccumulator<T>
         {
