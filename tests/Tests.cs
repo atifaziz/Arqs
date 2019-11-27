@@ -17,6 +17,7 @@
 namespace Largs.Tests
 {
     using System.Collections.Generic;
+    using System.Linq;
     using NUnit.Framework;
 
     public class Tests
@@ -35,7 +36,15 @@ namespace Largs.Tests
                 select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs), Pos1 = pos1, Pos2 = pos2 };
 
             var commandLine = "1 --bar --foo 4 2 hello --foo 2 -x one -x two world -x three".Split();
-            var (result, tail) = args.Bind(commandLine);
+
+            var help    = from f in Args.Flag("h") select (f, 1);
+            var version = from f in Args.Flag("v") select (f, 2);
+            var margs   = from e in args select (3, e);
+
+            var (mode, result, tail) =
+                ArgBinder.Bind(new[]{ help, version }, margs, commandLine);
+
+            Assert.That(mode, Is.EqualTo(3));
 
             Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
             Assert.That(result.Bar, Is.True);
@@ -54,6 +63,20 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.EqualTo("x"));
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
+
+            (mode, result, tail) =
+                ArgBinder.Bind(new[] { help, version }, margs,
+                               commandLine.Prepend("-h").Prepend("-v").ToArray());
+
+            Assert.That(mode, Is.EqualTo(1));
+            Assert.That(tail, Is.EqualTo(commandLine.Prepend("-v")));
+
+            (mode, result, tail) =
+                ArgBinder.Bind(new[] { help, version }, margs,
+                               commandLine.Prepend("-v").ToArray());
+
+            Assert.That(mode, Is.EqualTo(2));
+            Assert.That(tail, Is.EqualTo(commandLine));
         }
 
         [Test]

@@ -40,8 +40,31 @@ namespace Largs
             Create(bindings => (first.Bind(bindings), second.Bind(bindings)),
                 args     => { first.Inspect(args); second.Inspect(args); });
 
+        enum BindMode { Strict, Tolerant }
+
         public static (T Result, ImmutableArray<string> Tail)
-            Bind<T>(this IArgBinder<T> binder, params string[] args)
+            Bind<T>(this IArgBinder<T> binder, params string[] args) =>
+            binder.Bind(BindMode.Strict, args);
+
+        public static (M Mode, T Result, ImmutableArray<string> Tail)
+            Bind<T, M>(IEnumerable<IArgBinder<(bool, M)>> modalBinders,
+                       IArgBinder<(M, T)> binder,
+                       params string[] args)
+        {
+            ImmutableArray<string> tail;
+            foreach (var modalBinder in modalBinders)
+            {
+                var ((flag, mode), tail2) = modalBinder.Bind(BindMode.Tolerant, args);
+                if (flag)
+                    return (mode, default, tail2);
+                tail = tail2;
+            }
+            var ((mode3, result), tail3) = binder.Bind(tail.ToArray());
+            return (mode3, result, tail3);
+        }
+
+        static (T Result, ImmutableArray<string> Tail)
+            Bind<T>(this IArgBinder<T> binder, BindMode mode, params string[] args)
         {
             var infos = new List<IArg>();
             binder.Inspect(infos);
@@ -88,8 +111,15 @@ namespace Largs
                         {
                             var i = infos.FindIndex(e => e.Name.Length == 1 && e.Name[0] == ch);
                             if (i < 0)
-                                throw new Exception("Invalid option: " + ch);
-                            e.Unread("-" + ch);
+                            {
+                                if (mode == BindMode.Strict)
+                                    throw new Exception("Invalid option: " + ch);
+                                tail.Add("-" + ch);
+                            }
+                            else
+                            {
+                                e.Unread("-" + ch);
+                            }
                         }
                     }
                     else
@@ -97,10 +127,18 @@ namespace Largs
                         var ch = arg[1];
                         var i = infos.FindIndex(e => e.Name.Length == 1 && e.Name[0] == ch);
                         if (i < 0)
-                            throw new Exception("Invalid option: " + ch);
-                        e.Read();
-                        if (!values[i].Read(e))
-                            throw new Exception("Invalid value for option: " + ch);
+                        {
+                            if (mode == BindMode.Strict)
+                                throw new Exception("Invalid option: " + ch);
+                            e.Read();
+                            tail.Add(arg);
+                        }
+                        else
+                        {
+                            e.Read();
+                            if (!values[i].Read(e))
+                                throw new Exception("Invalid value for option: " + ch);
+                        }
                     }
                 }
                 else
