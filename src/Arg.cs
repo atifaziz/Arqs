@@ -68,6 +68,47 @@ namespace Largs
         public void Inspect(ICollection<IArg> args) => args.Add(this);
     }
 
+    public class FlagArg<T> : IArg, IArgBinder<T>
+    {
+        readonly Func<IAccumulator> _accumulatorFactory;
+        readonly Func<IAccumulator, T> _binder;
+
+        public FlagArg(IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder) :
+            this(PropertySet.Empty, parser, accumulatorFactory, binder) {}
+
+        public FlagArg(PropertySet properties, IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder)
+        {
+            Properties = properties ?? throw new ArgumentNullException(nameof(properties));
+            _accumulatorFactory = accumulatorFactory ?? throw new ArgumentNullException(nameof(accumulatorFactory));
+            Parser = parser ?? throw new ArgumentNullException(nameof(parser));
+            _binder = binder ?? throw new ArgumentNullException(nameof(binder));
+        }
+
+        public PropertySet Properties { get; }
+
+        IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
+
+        public FlagArg<T> WithProperties(PropertySet value) =>
+            Properties == value ? this : new FlagArg<T>(value, Parser, _accumulatorFactory, _binder);
+
+        public IParser<T> Parser { get; }
+
+        public IAccumulator CreateAccumulator() => _accumulatorFactory();
+
+        public Arg<(bool Present, T Value)> FlagPresence() =>
+            FlagPresence(false, true);
+
+        public Arg<(TPresence Presence, T Value)> FlagPresence<TPresence>(TPresence absent, TPresence present) =>
+            new Arg<(TPresence, T)>(Properties,
+                                    from v in Parser select (present, v),
+                                    _accumulatorFactory, r => r.HasValue ? (present, _binder(r)) : (absent, default));
+
+        public T Bind(Func<IArg, IAccumulator> source) =>
+            _binder(source(this));
+
+        public void Inspect(ICollection<IArg> args) => args.Add(this);
+    }
+
     public class ListArg<T> : IArg, IArgBinder<ImmutableArray<T>>
     {
         readonly Arg<T> _arg;
@@ -208,8 +249,10 @@ namespace Largs
 
     public static class Args
     {
-        public static Arg<bool> Flag(string name) =>
-            new Arg<bool>(Parser.Create<bool>(_ => throw new NotSupportedException()), Accumulator.Flag, r => r.HasValue)
+        static readonly IParser<bool> FlagParser = Parser.Create(arg => arg switch { "+" => ParseResult.Success(true), "-" => ParseResult.Success(false), _ => default });
+
+        public static FlagArg<int> Flag(string name) =>
+            new FlagArg<int>(FlagParser, Accumulator.Create(0, (count, args) => args.TryRead(out var s) ? (from v in FlagParser select count + (v ? 1 : 0)).Parse(s) : default), r => r.HasValue)
                 .WithName(name);
 
         public static Arg<T> Option<T>(string name, T @default, IParser<T> parser) =>
