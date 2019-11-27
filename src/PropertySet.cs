@@ -32,61 +32,24 @@ namespace Largs
         public override string ToString() => _description ?? "#" + GetHashCode();
     }
 
-    public sealed class Property : IEquatable<Property>
-    {
-        enum Flags
-        {
-            None,
-            Writable,
-        }
-
-        public static Property ReadOnly(Symbol symbol) => new Property(symbol, Flags.None);
-        public static Property Writable(Symbol symbol) => new Property(symbol, Flags.Writable);
-
-        readonly Symbol _symbol;
-        readonly Flags _flags;
-
-        Property(Symbol symbol, Flags flags)
-        {
-            _symbol = symbol ?? throw new ArgumentNullException(nameof(symbol));
-            _flags = flags;
-        }
-
-        public bool IsWritable => _flags.HasFlag(Flags.Writable);
-
-        public override string ToString() => _symbol.ToString();
-
-        public bool Equals(Property other) =>
-            !ReferenceEquals(null, other) &&
-            (ReferenceEquals(this, other) || Equals(_symbol, other._symbol));
-
-        public override bool Equals(object obj) =>
-            obj is Property other && Equals(other);
-
-        public override int GetHashCode() =>
-            _symbol.GetHashCode();
-    }
-
     [DebuggerDisplay("Count = {" + nameof(Count) + "}")]
     public sealed class PropertySet
     {
-        public static readonly PropertySet Empty = new PropertySet(ImmutableDictionary<Property, object>.Empty);
+        public static readonly PropertySet Empty = new PropertySet(ImmutableDictionary<Symbol, object>.Empty);
 
-        readonly ImmutableDictionary<Property, object> _properties;
+        readonly ImmutableDictionary<Symbol, object> _properties;
 
-        public PropertySet(Property property, object value) :
-            this(ImmutableDictionary<Property, object>.Empty.Add(property, value)) {}
+        public PropertySet(Symbol property, object value) :
+            this(ImmutableDictionary<Symbol, object>.Empty.Add(property, value)) {}
 
-        public PropertySet(ImmutableDictionary<Property, object> properties) =>
+        public PropertySet(ImmutableDictionary<Symbol, object> properties) =>
             _properties = properties ?? throw new ArgumentNullException(nameof(properties));
 
         public int Count => _properties.Count;
 
-        public object this[Property key] => _properties.TryGetValue(key, out var value) ? value : null;
+        public object this[Symbol key] => _properties.TryGetValue(key, out var value) ? value : null;
 
-        public PropertySet With(Property key, object value) =>
-            key.IsWritable
-            ? this[key] == value ? this : new PropertySet(_properties.Add(key, value))
-            : throw new InvalidOperationException();
+        public PropertySet With(Symbol key, object value) =>
+            this[key] == value ? this : new PropertySet(_properties.Add(key, value));
     }
 }

@@ -181,23 +181,17 @@ namespace Largs
             public static readonly Symbol Description = Symbol.New(nameof(Description));
         }
 
-        public static class Properties
-        {
-            public static readonly Property Name        = Property.Writable(Symbols.Name);
-            public static readonly Property Description = Property.Writable(Symbols.Description);
-        }
-
         public static string Name(this IArg arg) =>
-            (string)arg.Properties[Properties.Name];
+            (string)arg.Properties[Symbols.Name];
 
         public static T WithName<T>(this T arg, string value) where T : IArg =>
-            (T)arg.WithProperties(arg.Properties.With(Properties.Name, value));
+            (T)arg.WithProperties(arg.Properties.With(Symbols.Name, value));
 
         public static string Description(this IArg arg) =>
-            (string)arg.Properties[Properties.Description];
+            (string)arg.Properties[Symbols.Description];
 
         public static IArg WithDescription<T>(this T arg, string value) where T : IArg =>
-            (T)arg.WithProperties(arg.Properties.With(Properties.Description, value));
+            (T)arg.WithProperties(arg.Properties.With(Symbols.Description, value));
     }
 
     public static class Args
