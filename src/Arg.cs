@@ -27,7 +27,13 @@ namespace Largs
         IAccumulator CreateAccumulator();
     }
 
-    public class Arg<T> : IArg, IArgBinder<T>
+    public interface IArg<out T> : IArg, IArgBinder<T>
+    {
+        new IArg<T> WithProperties(PropertySet value);
+        new IAccumulator<T> CreateAccumulator();
+    }
+
+    public class Arg<T> : IArg<T>
     {
         readonly Func<IAccumulator<T>> _accumulatorFactory;
         readonly Func<IAccumulator<T>, T> _binder;
@@ -46,13 +52,15 @@ namespace Largs
         public PropertySet Properties { get; }
 
         IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
+        IArg<T> IArg<T>.WithProperties(PropertySet value) => WithProperties(value);
 
         public Arg<T> WithProperties(PropertySet value) =>
             Properties == value ? this : new Arg<T>(value, Parser, _accumulatorFactory, _binder);
 
         public IParser<T> Parser { get; }
 
-        public IAccumulator CreateAccumulator() => _accumulatorFactory();
+        IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
+        public IAccumulator<T> CreateAccumulator() => _accumulatorFactory();
 
         public Arg<(bool Present, T Value)> FlagPresence() =>
             FlagPresence(false, true);
@@ -72,7 +80,7 @@ namespace Largs
         public IEnumerable<IArg> Inspect() { yield return this; }
     }
 
-    public class ListArg<T> : IArg, IArgBinder<ImmutableArray<T>>
+    public class ListArg<T> : IArg<ImmutableArray<T>>
     {
         readonly Arg<T> _arg;
 
@@ -87,31 +95,35 @@ namespace Largs
         public PropertySet Properties { get; }
 
         IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
+        IArg<ImmutableArray<T>> IArg<ImmutableArray<T>>.WithProperties(PropertySet value) => WithProperties(value);
 
         public ListArg<T> WithProperties(PropertySet value) =>
             Properties == value ? this : new ListArg<T>(value, _arg);
 
         public IParser<T> ItemParser => _arg.Parser;
 
-        public IAccumulator CreateAccumulator() =>
-            Accumulator.Create(ImmutableArray.CreateBuilder<T>(), (array, arg) =>
+        IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
+
+        public IAccumulator<ImmutableArray<T>> CreateAccumulator() =>
+            Accumulator.Create(ImmutableArray<T>.Empty, (seed, arg) =>
             {
+                var array = seed.ToBuilder();
                 var reader = _arg.CreateAccumulator();
                 if (!reader.Read(arg))
                     return default;
                 array.Add(_arg.Bind(_ => reader));
-                return ParseResult.Success(array);
+                return ParseResult.Success(array.ToImmutable());
             });
 
         object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
 
         public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
-            ((ImmutableArray<T>.Builder)source(this).Value).ToImmutable();
+            (ImmutableArray<T>)source(this).Value;
 
         public IEnumerable<IArg> Inspect() { yield return this; }
     }
 
-    public class TailArg<T> : IArg, IArgBinder<ImmutableArray<T>>
+    public class TailArg<T> : IArg<ImmutableArray<T>>
     {
         readonly Arg<T> _arg;
 
@@ -126,15 +138,19 @@ namespace Largs
         public PropertySet Properties { get; }
 
         IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
+        IArg<ImmutableArray<T>> IArg<ImmutableArray<T>>.WithProperties(PropertySet value) => WithProperties(value);
 
         public TailArg<T> WithProperties(PropertySet value) =>
             Properties == value ? this : new TailArg<T>(value, _arg);
 
         public IParser<T> ItemParser => _arg.Parser;
 
-        public IAccumulator CreateAccumulator() =>
-            Accumulator.Create(ImmutableArray.CreateBuilder<T>(), (array, arg) =>
+        IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
+
+        public IAccumulator<ImmutableArray<T>> CreateAccumulator() =>
+            Accumulator.Create(ImmutableArray<T>.Empty, (seed, arg) =>
             {
+                var array = seed.ToBuilder();
                 while (arg.HasMore())
                 {
                     var reader = _arg.CreateAccumulator();
@@ -142,13 +158,13 @@ namespace Largs
                         return default;
                     array.Add(_arg.Bind(_ => reader));
                 }
-                return ParseResult.Success(array);
+                return ParseResult.Success(array.ToImmutable());
             });
 
         object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
 
         public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
-            ((ImmutableArray<T>.Builder)source(this).Value).ToImmutable();
+            ((ImmutableArray<T>)source(this).Value);
 
         public IEnumerable<IArg> Inspect() { yield return this; }
     }
