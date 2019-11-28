@@ -44,6 +44,9 @@ namespace Largs
         public static IAccumulator<T> Create<T>(T seed, Func<T, Reader<string>, ParseResult<T>> reader) =>
             new DelegatingAccumulator<T>(seed, reader);
 
+        public static IAccumulator<U> Select<T, U>(this IAccumulator<T> accumulator, Func<T, U> f) =>
+            Create<U>(default, (_, arg) => !accumulator.Read(arg) ? default : ParseResult.Success(f(accumulator.Value)));
+
         sealed class DelegatingAccumulator<T> : IAccumulator<T>
         {
             public bool HasValue { get; private set; }
