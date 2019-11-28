@@ -21,10 +21,15 @@ namespace Largs
     using System.Collections.Immutable;
     using System.Linq;
 
-    public interface IArgBinder<out T>
+    public interface IArgBinder
     {
-        T Bind(Func<IArg, IAccumulator> source);
+        object Bind(Func<IArg, IAccumulator> source);
         IEnumerable<IArg> Inspect();
+    }
+
+    public interface IArgBinder<out T> : IArgBinder
+    {
+        new T Bind(Func<IArg, IAccumulator> source);
     }
 
     public static class ArgBinder
@@ -193,6 +198,9 @@ namespace Largs
                 _binder = binder;
                 _inspector = inspector;
             }
+
+            object IArgBinder.Bind(Func<IArg, IAccumulator> source) =>
+                Bind(source);
 
             public T Bind(Func<IArg, IAccumulator> source) =>
                 _binder(source);

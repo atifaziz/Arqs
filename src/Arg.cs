@@ -20,7 +20,7 @@ namespace Largs
     using System.Collections.Generic;
     using System.Collections.Immutable;
 
-    public interface IArg
+    public interface IArg : IArgBinder
     {
         PropertySet Properties { get; }
         IArg WithProperties(PropertySet value);
@@ -64,6 +64,8 @@ namespace Largs
                                           select (Presence: present, Value: v),
                                     r => r.HasValue ? (present, _binder(Accumulator.Return(r.Value.Item2))) : (absent, default));
 
+        object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
+
         public T Bind(Func<IArg, IAccumulator> source) =>
             _binder((IAccumulator<T>)source(this));
 
@@ -100,6 +102,8 @@ namespace Largs
                 array.Add(_arg.Bind(_ => reader));
                 return ParseResult.Success(array);
             });
+
+        object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
 
         public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
             ((ImmutableArray<T>.Builder)source(this).Value).ToImmutable();
@@ -140,6 +144,8 @@ namespace Largs
                 }
                 return ParseResult.Success(array);
             });
+
+        object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
 
         public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
             ((ImmutableArray<T>.Builder)source(this).Value).ToImmutable();
