@@ -29,13 +29,13 @@ namespace Largs
 
     public class Arg<T> : IArg, IArgBinder<T>
     {
-        readonly Func<IAccumulator> _accumulatorFactory;
-        readonly Func<IAccumulator, T> _binder;
+        readonly Func<IAccumulator<T>> _accumulatorFactory;
+        readonly Func<IAccumulator<T>, T> _binder;
 
-        public Arg(IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder) :
+        public Arg(IParser<T> parser, Func<IAccumulator<T>> accumulatorFactory, Func<IAccumulator<T>, T> binder) :
             this(PropertySet.Empty, parser, accumulatorFactory, binder) {}
 
-        public Arg(PropertySet properties, IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder)
+        public Arg(PropertySet properties, IParser<T> parser, Func<IAccumulator<T>> accumulatorFactory, Func<IAccumulator<T>, T> binder)
         {
             Properties = properties ?? throw new ArgumentNullException(nameof(properties));
             _accumulatorFactory = accumulatorFactory ?? throw new ArgumentNullException(nameof(accumulatorFactory));
@@ -60,10 +60,12 @@ namespace Largs
         public Arg<(TPresence Presence, T Value)> FlagPresence<TPresence>(TPresence absent, TPresence present) =>
             new Arg<(TPresence, T)>(Properties,
                                     from v in Parser select (present, v),
-                                    _accumulatorFactory, r => r.HasValue ? (present, _binder(r)) : (absent, default));
+                                    () => from v in _accumulatorFactory()
+                                          select (Presence: present, Value: v),
+                                    r => r.HasValue ? (present, _binder(Accumulator.Return(r.Value.Item2))) : (absent, default));
 
         public T Bind(Func<IArg, IAccumulator> source) =>
-            _binder(source(this));
+            _binder((IAccumulator<T>)source(this));
 
         public IEnumerable<IArg> Inspect() { yield return this; }
     }
@@ -181,18 +183,20 @@ namespace Largs
     public partial class Arg
     {
         public static Arg<bool> Flag(string name) =>
-            new Arg<bool>(Parser.Create<bool>(_ => throw new NotSupportedException()), Accumulator.Flag, r => r.HasValue)
+            new Arg<bool>(Parser.Create<bool>(_ => throw new NotSupportedException()),
+                                              () => from x in Accumulator.Flag() select x > 0,
+                                              r => r.HasValue)
                 .WithName(name);
 
         public static Arg<T> Option<T>(string name, T @default, IParser<T> parser) =>
-            new Arg<T>(parser, () => Accumulator.Value(parser), r => r.HasValue ? ((IAccumulator<T>)r).Value : @default)
+            new Arg<T>(parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default)
                 .WithName(name);
 
         public static Arg<T> Option<T>(string name, IParser<T> parser) =>
             Option(name, default, parser);
 
         public static Arg<T> Operand<T>(string name, T @default, IParser<T> parser) =>
-            new Arg<T>(parser, () => Accumulator.Value(parser), r => r.HasValue ? ((IAccumulator<T>)r).Value : @default);
+            new Arg<T>(parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default);
 
         public static Arg<T> Operand<T>(string name, IParser<T> parser) =>
             Operand(name, default, parser);
