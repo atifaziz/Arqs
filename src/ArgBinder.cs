@@ -24,21 +24,17 @@ namespace Largs
     public interface IArgBinder<out T>
     {
         T Bind(Func<IArg, IAccumulator> source);
-        void Inspect(ICollection<IArg> args);
+        IEnumerable<IArg> Inspect();
     }
 
     public static class ArgBinder
     {
-        public static IList<IArg> Inspect<T>(this IArgBinder<T> binder)
-        {
-            var infos = new List<IArg>();
-            binder.Inspect(infos);
-            return infos;
-        }
+        public static IList<IArg> Inspect<T>(this IArgBinder<T> binder) =>
+            binder.Inspect().ToList();
 
         public static IArgBinder<(T, U)> Zip<T, U>(this IArgBinder<T> first, IArgBinder<U> second) =>
             Create(bindings => (first.Bind(bindings), second.Bind(bindings)),
-                args     => { first.Inspect(args); second.Inspect(args); });
+                   () => first.Inspect().Concat(second.Inspect()));
 
         enum BindMode { Strict, Tolerant }
 
@@ -73,8 +69,7 @@ namespace Largs
         static (T Result, ImmutableArray<string> Tail)
             Bind<T>(this IArgBinder<T> binder, BindMode mode, params string[] args)
         {
-            var infos = new List<IArg>();
-            binder.Inspect(infos);
+            var infos = binder.Inspect().ToList();
             var asi = 0;
             var values = new IAccumulator[infos.Count];
             for (var i = 0; i < infos.Count; i++)
@@ -168,7 +163,7 @@ namespace Largs
             return (binder.Bind(info => values[infos.IndexOf(info)]), tail.ToImmutableArray());
         }
 
-        public static IArgBinder<T> Create<T>(Func<Func<IArg, IAccumulator>, T> binder, Action<ICollection<IArg>> inspector) =>
+        public static IArgBinder<T> Create<T>(Func<Func<IArg, IAccumulator>, T> binder, Func<IEnumerable<IArg>> inspector) =>
             new DelegatingArgBinder<T>(binder, inspector);
 
         public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
@@ -176,11 +171,7 @@ namespace Largs
 
         public static IArgBinder<U> SelectMany<T, U>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f) =>
             Create(bindings => f(binder.Bind(bindings)).Bind(bindings),
-                args =>
-                {
-                    binder.Inspect(args);
-                    f(binder.Bind(delegate { throw new InvalidOperationException(); })).Inspect(args);
-                });
+                   () => binder.Inspect().Concat(f(binder.Bind(delegate { throw new InvalidOperationException(); })).Inspect()));
 
         public static IArgBinder<V> SelectMany<T, U, V>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f, Func<T, U, V> g) =>
             binder.Select(t => f(t).Select(u => g(t, u))).SelectMany(pv => pv);
@@ -194,10 +185,10 @@ namespace Largs
         sealed class DelegatingArgBinder<T> : IArgBinder<T>
         {
             readonly Func<Func<IArg, IAccumulator>, T> _binder;
-            readonly Action<ICollection<IArg>> _inspector;
+            readonly Func<IEnumerable<IArg>> _inspector;
 
             public DelegatingArgBinder(Func<Func<IArg, IAccumulator>, T> binder,
-                Action<ICollection<IArg>> inspector)
+                                       Func<IEnumerable<IArg>> inspector)
             {
                 _binder = binder;
                 _inspector = inspector;
@@ -206,8 +197,8 @@ namespace Largs
             public T Bind(Func<IArg, IAccumulator> source) =>
                 _binder(source);
 
-            public void Inspect(ICollection<IArg> args) =>
-                _inspector(args);
+            public IEnumerable<IArg> Inspect() =>
+                _inspector();
         }
     }
 }

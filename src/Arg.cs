@@ -65,7 +65,7 @@ namespace Largs
         public T Bind(Func<IArg, IAccumulator> source) =>
             _binder(source(this));
 
-        public void Inspect(ICollection<IArg> args) => args.Add(this);
+        public IEnumerable<IArg> Inspect() { yield return this; }
     }
 
     public class ListArg<T> : IArg, IArgBinder<ImmutableArray<T>>
@@ -94,7 +94,7 @@ namespace Largs
         public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
             ((Accumulator)source(this)).Value.ToImmutable();
 
-        public void Inspect(ICollection<IArg> args) => args.Add(this);
+        public IEnumerable<IArg> Inspect() { yield return this; }
 
         sealed class Accumulator : IAccumulator<ImmutableArray<T>.Builder>
         {
@@ -145,7 +145,7 @@ namespace Largs
         public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
             ((Accumulator)source(this)).Value.ToImmutable();
 
-        public void Inspect(ICollection<IArg> args) => args.Add(this);
+        public IEnumerable<IArg> Inspect() { yield return this; }
 
         sealed class Accumulator : IAccumulator<ImmutableArray<T>.Builder>
         {
