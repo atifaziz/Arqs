@@ -89,34 +89,20 @@ namespace Largs
 
         public IParser<T> ItemParser => _arg.Parser;
 
-        public IAccumulator CreateAccumulator() => new Accumulator(_arg);
-
-        public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
-            ((Accumulator)source(this)).Value.ToImmutable();
-
-        public IEnumerable<IArg> Inspect() { yield return this; }
-
-        sealed class Accumulator : IAccumulator<ImmutableArray<T>.Builder>
-        {
-            readonly Arg<T> _arg;
-
-            public Accumulator(Arg<T> arg) => _arg = arg;
-
-            public bool HasValue => true;
-
-            public ImmutableArray<T>.Builder Value { get; } = ImmutableArray.CreateBuilder<T>();
-
-            object IAccumulator.Value => Value;
-
-            public bool Read(Reader<string> arg)
+        public IAccumulator CreateAccumulator() =>
+            Accumulator.Create(ImmutableArray.CreateBuilder<T>(), (array, arg) =>
             {
                 var reader = _arg.CreateAccumulator();
                 if (!reader.Read(arg))
-                    return false;
-                Value.Add(_arg.Bind(_ => reader));
-                return true;
-            }
-        }
+                    return default;
+                array.Add(_arg.Bind(_ => reader));
+                return ParseResult.Success(array);
+            });
+
+        public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
+            ((ImmutableArray<T>.Builder)source(this).Value).ToImmutable();
+
+        public IEnumerable<IArg> Inspect() { yield return this; }
     }
 
     public class TailArg<T> : IArg, IArgBinder<ImmutableArray<T>>
@@ -140,37 +126,23 @@ namespace Largs
 
         public IParser<T> ItemParser => _arg.Parser;
 
-        public IAccumulator CreateAccumulator() => new Accumulator(_arg);
-
-        public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
-            ((Accumulator)source(this)).Value.ToImmutable();
-
-        public IEnumerable<IArg> Inspect() { yield return this; }
-
-        sealed class Accumulator : IAccumulator<ImmutableArray<T>.Builder>
-        {
-            readonly Arg<T> _arg;
-
-            public Accumulator(Arg<T> arg) => _arg = arg;
-
-            public bool HasValue => true;
-
-            public ImmutableArray<T>.Builder Value { get; } = ImmutableArray.CreateBuilder<T>();
-
-            object IAccumulator.Value => Value;
-
-            public bool Read(Reader<string> arg)
+        public IAccumulator CreateAccumulator() =>
+            Accumulator.Create(ImmutableArray.CreateBuilder<T>(), (array, arg) =>
             {
                 while (arg.HasMore())
                 {
                     var reader = _arg.CreateAccumulator();
                     if (!reader.Read(arg))
-                        return false;
-                    Value.Add(_arg.Bind(_ => reader));
+                        return default;
+                    array.Add(_arg.Bind(_ => reader));
                 }
-                return true;
-            }
-        }
+                return ParseResult.Success(array);
+            });
+
+        public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
+            ((ImmutableArray<T>.Builder)source(this).Value).ToImmutable();
+
+        public IEnumerable<IArg> Inspect() { yield return this; }
     }
 
     public static partial class Arg
