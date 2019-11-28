@@ -185,6 +185,9 @@ namespace Largs
         public static IParser<DateTime> DateTime(string format) => Parsers.DateTime.WithOptions(Parsers.DateTime.Options.WithFormats(ImmutableArray.Create(format)));
         public static IParser<string> String() => Parsers.Id;
 
+        public static IParser<string> Literal(string value) =>
+            Create(s => s == value ? ParseResult.Success(s) : default);
+
         public static IParser<T> Range<T>(this IParser<T> parser, T min, T max) where T : IComparable<T> =>
             from v in parser
             select v.CompareTo(min) >= 0 && v.CompareTo(max) <= 0 ? v : throw new Exception();
