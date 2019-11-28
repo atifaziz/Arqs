@@ -29,7 +29,7 @@ namespace Largs
 
     public class Arg<T> : IArg, IArgBinder<T>
     {
-        readonly Func<IAccumulator> _readerFactory;
+        readonly Func<IAccumulator> _accumulatorFactory;
         readonly Func<IAccumulator, T> _binder;
 
         public Arg(IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder) :
@@ -38,7 +38,7 @@ namespace Largs
         public Arg(PropertySet properties, IParser<T> parser, Func<IAccumulator> accumulatorFactory, Func<IAccumulator, T> binder)
         {
             Properties = properties ?? throw new ArgumentNullException(nameof(properties));
-            _readerFactory = accumulatorFactory ?? throw new ArgumentNullException(nameof(accumulatorFactory));
+            _accumulatorFactory = accumulatorFactory ?? throw new ArgumentNullException(nameof(accumulatorFactory));
             Parser = parser ?? throw new ArgumentNullException(nameof(parser));
             _binder = binder ?? throw new ArgumentNullException(nameof(binder));
         }
@@ -48,11 +48,11 @@ namespace Largs
         IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
 
         public Arg<T> WithProperties(PropertySet value) =>
-            Properties == value ? this : new Arg<T>(value, Parser, _readerFactory, _binder);
+            Properties == value ? this : new Arg<T>(value, Parser, _accumulatorFactory, _binder);
 
         public IParser<T> Parser { get; }
 
-        public IAccumulator CreateAccumulator() => _readerFactory();
+        public IAccumulator CreateAccumulator() => _accumulatorFactory();
 
         public Arg<(bool Present, T Value)> FlagPresence() =>
             FlagPresence(false, true);
@@ -60,7 +60,7 @@ namespace Largs
         public Arg<(TPresence Presence, T Value)> FlagPresence<TPresence>(TPresence absent, TPresence present) =>
             new Arg<(TPresence, T)>(Properties,
                                     from v in Parser select (present, v),
-                                    _readerFactory, r => r.HasValue ? (present, _binder(r)) : (absent, default));
+                                    _accumulatorFactory, r => r.HasValue ? (present, _binder(r)) : (absent, default));
 
         public T Bind(Func<IArg, IAccumulator> source) =>
             _binder(source(this));
