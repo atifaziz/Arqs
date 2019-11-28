@@ -47,6 +47,13 @@ namespace Largs
             binder.Bind(BindMode.Strict, args);
 
         public static (M Mode, T Result, ImmutableArray<string> Tail)
+            Bind<T, M>(IArgBinder<(bool, M)> modalBinder1,
+                       IArgBinder<(bool, M)> modalBinder2,
+                       IArgBinder<(M, T)> binder,
+                       params string[] args) =>
+            Bind(new[] { modalBinder1, modalBinder2 }, binder, args);
+
+        public static (M Mode, T Result, ImmutableArray<string> Tail)
             Bind<T, M>(IEnumerable<IArgBinder<(bool, M)>> modalBinders,
                        IArgBinder<(M, T)> binder,
                        params string[] args)
