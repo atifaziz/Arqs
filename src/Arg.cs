@@ -173,7 +173,7 @@ namespace Largs
         }
     }
 
-    public static class Arg
+    public static partial class Arg
     {
         public static class Symbols
         {
@@ -206,7 +206,7 @@ namespace Largs
             properties.With(Symbols.Description, value);
     }
 
-    public static class Args
+    public partial class Arg
     {
         public static Arg<bool> Flag(string name) =>
             new Arg<bool>(Parser.Create<bool>(_ => throw new NotSupportedException()), Accumulator.Flag, r => r.HasValue)
@@ -219,11 +219,11 @@ namespace Largs
         public static Arg<T> Option<T>(string name, IParser<T> parser) =>
             Option(name, default, parser);
 
-        public static Arg<T> Arg<T>(string name, T @default, IParser<T> parser) =>
+        public static Arg<T> Operand<T>(string name, T @default, IParser<T> parser) =>
             new Arg<T>(parser, () => Accumulator.Value(parser), r => r.HasValue ? ((IAccumulator<T>)r).Value : @default);
 
-        public static Arg<T> Arg<T>(string name, IParser<T> parser) =>
-            Arg(name, default, parser);
+        public static Arg<T> Operand<T>(string name, IParser<T> parser) =>
+            Operand(name, default, parser);
 
         public static TailArg<T> Tail<T>(this Arg<T> arg) =>
             new TailArg<T>(arg);

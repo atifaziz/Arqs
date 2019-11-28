@@ -25,19 +25,19 @@ namespace Largs.Tests
         [Test]
         public void Test1()
         {
-            var help    = from f in Args.Flag("h") select (f, 1);
-            var version = from f in Args.Flag("v") select (f, 2);
+            var help    = from f in Arg.Flag("h") select (f, 1);
+            var version = from f in Arg.Flag("v") select (f, 2);
 
             var args =
                 from h    in help
                 join v    in version on 1 equals 1
-                join foo  in Args.Option("foo", -1, Parser.Int32()).List() on 1 equals 1
-                join bar  in Args.Flag("bar")  on 1 equals 1
-                join baz  in Args.Option("baz", Parser.Int32().Nullable())  on 1 equals 1
-                join qux  in Args.Option("qux", "?", Parser.String()) on 1 equals 1
-                join xs   in Args.Option("x", Parser.String()).List() on 1 equals 1
-                join pos1 in Args.Arg("x", Parser.String()) on 1 equals 1
-                join pos2 in Args.Arg("x", Parser.String()) on 1 equals 1
+                join foo  in Arg.Option("foo", -1, Parser.Int32()).List() on 1 equals 1
+                join bar  in Arg.Flag("bar")  on 1 equals 1
+                join baz  in Arg.Option("baz", Parser.Int32().Nullable())  on 1 equals 1
+                join qux  in Arg.Option("qux", "?", Parser.String()) on 1 equals 1
+                join xs   in Arg.Option("x", Parser.String()).List() on 1 equals 1
+                join pos1 in Arg.Operand("x", Parser.String()) on 1 equals 1
+                join pos2 in Arg.Operand("x", Parser.String()) on 1 equals 1
                 select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs), Pos1 = pos1, Pos2 = pos2 }
                 into e
                 select (3, e);
@@ -88,14 +88,14 @@ namespace Largs.Tests
         public void Test2()
         {
             var args =
-                from foo  in Args.Option("foo", -1, Parser.Int32()).List()
-                join bar  in Args.Flag("bar") on 1 equals 1
-                join baz  in Args.Option("baz", Parser.Int32().Nullable()) on 1 equals 1
-                join qux  in Args.Option("qux", "?", Parser.String()) on 1 equals 1
-                join xs   in Args.Option("x", Parser.String()).List() on 1 equals 1
-                join pos1 in Args.Arg("x", Parser.String()) on 1 equals 1
-                join pos2 in Args.Arg("x", Parser.String()) on 1 equals 1
-                join rest in Args.Arg("rest", Parser.String()).Tail() on 1 equals 1
+                from foo  in Arg.Option("foo", -1, Parser.Int32()).List()
+                join bar  in Arg.Flag("bar") on 1 equals 1
+                join baz  in Arg.Option("baz", Parser.Int32().Nullable()) on 1 equals 1
+                join qux  in Arg.Option("qux", "?", Parser.String()) on 1 equals 1
+                join xs   in Arg.Option("x", Parser.String()).List() on 1 equals 1
+                join pos1 in Arg.Operand("x", Parser.String()) on 1 equals 1
+                join pos2 in Arg.Operand("x", Parser.String()) on 1 equals 1
+                join rest in Arg.Operand("rest", Parser.String()).Tail() on 1 equals 1
                 select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs), Pos1 = pos1, Pos2 = pos2, Rest = rest };
 
             var commandLine = "1 --bar --foo 4 2 --foo 2 -x one -x two -x three hello world".Split();
@@ -126,9 +126,9 @@ namespace Largs.Tests
         public void Test3()
         {
             var args =
-                from foo  in Args.Option("foo", -1, Parser.Int32()).List()
-                join bar  in Args.Flag("bar").FlagPresence() on 1 equals 1
-                join baz  in Args.Option("baz", Parser.Int32()).FlagPresence() on 1 equals 1
+                from foo  in Arg.Option("foo", -1, Parser.Int32()).List()
+                join bar  in Arg.Flag("bar").FlagPresence() on 1 equals 1
+                join baz  in Arg.Option("baz", Parser.Int32()).FlagPresence() on 1 equals 1
                 select new { Foo = foo, Bar = bar, Baz = baz };
 
             var commandLine = "--foo 4 --foo 2 --baz 42 --bar".Split();
@@ -149,10 +149,10 @@ namespace Largs.Tests
         public void Test4()
         {
             var args =
-                from a in Args.Flag("a")
-                join b in Args.Flag("b")  on 1 equals 1
-                join c in Args.Flag("c")  on 1 equals 1
-                join d in Args.Option("d", Parser.Int32()) on 1 equals 1
+                from a in Arg.Flag("a")
+                join b in Arg.Flag("b")  on 1 equals 1
+                join c in Arg.Flag("c")  on 1 equals 1
+                join d in Arg.Option("d", Parser.Int32()) on 1 equals 1
                 select new { A = a, B = b, C = c, D = d };
 
             var commandLine = "-acd 42".Split();
