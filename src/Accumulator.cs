@@ -38,6 +38,9 @@ namespace Largs
         public static IAccumulator<int> Flag() =>
             Create(0, (count, _) => ParseResult.Success(count + 1));
 
+        public static IAccumulator<T> Return<T>(T value) =>
+            new DelegatingAccumulator<T>(true, value, (v, arg) => ParseResult.Success(v));
+
         public static IAccumulator<T> Create<T>(T seed, Func<T, Reader<string>, ParseResult<T>> reader) =>
             new DelegatingAccumulator<T>(seed, reader);
 
@@ -50,8 +53,12 @@ namespace Largs
 
             readonly Func<T, Reader<string>, ParseResult<T>> _reader;
 
-            public DelegatingAccumulator(T seed, Func<T, Reader<string>, ParseResult<T>> reader)
+            public DelegatingAccumulator(T seed, Func<T, Reader<string>, ParseResult<T>> reader) :
+                this(false, seed, reader) {}
+
+            public DelegatingAccumulator(bool initialized, T seed, Func<T, Reader<string>, ParseResult<T>> reader)
             {
+                HasValue = initialized;
                 Value = seed;
                 _reader = reader ?? throw new ArgumentNullException(nameof(reader));
             }
