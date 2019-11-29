@@ -204,21 +204,26 @@ namespace Largs
 
     public partial class Arg
     {
+        public static Arg<T> Create<T>(IParser<T> parser,
+                                       Func<IAccumulator<T>> accumulatorFactory,
+                                       Func<IAccumulator<T>, T> binder) =>
+            new Arg<T>(parser, accumulatorFactory, binder);
+
         public static Arg<bool> Flag(string name) =>
-            new Arg<bool>(Parser.Create<bool>(_ => throw new NotSupportedException()),
-                                              () => from x in Accumulator.Flag() select x > 0,
-                                              r => r.HasValue)
+            Create(Parser.Create<bool>(_ => throw new NotSupportedException()),
+                                       () => from x in Accumulator.Flag() select x > 0,
+                                       r => r.HasValue)
                 .WithName(name);
 
         public static Arg<T> Option<T>(string name, T @default, IParser<T> parser) =>
-            new Arg<T>(parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default)
+            Create(parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default)
                 .WithName(name);
 
         public static Arg<T> Option<T>(string name, IParser<T> parser) =>
             Option(name, default, parser);
 
         public static Arg<T> Operand<T>(string name, T @default, IParser<T> parser) =>
-            new Arg<T>(parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default);
+            Create(parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default);
 
         public static Arg<T> Operand<T>(string name, IParser<T> parser) =>
             Operand(name, default, parser);
