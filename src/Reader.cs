@@ -25,8 +25,11 @@ namespace Largs
         Stack<T> _nextItems;
         IEnumerator<T> _enumerator;
 
-        public Reader(IEnumerable<T> items) =>
+        public Reader(IEnumerable<T> items)
+        {
+            if (items == null) throw new ArgumentNullException(nameof(items));
             _enumerator = items.GetEnumerator();
+        }
 
         public int Index { get; private set; }
 
