@@ -28,6 +28,8 @@ namespace Largs
         public Reader(IEnumerable<T> items) =>
             _enumerator = items.GetEnumerator();
 
+        public int Index { get; private set; }
+
         public void Dispose()
         {
             var args  = _enumerator;
@@ -37,10 +39,14 @@ namespace Largs
 
         public bool HasMore() => TryPeek(out _);
 
-        public bool TryPeek(out T item)
+        public bool TryPeek(out T item) =>
+            TryPeek(out item, out _);
+
+        public bool TryPeek(out T item, out int index)
         {
-            if (!TryRead(out item))
+            if (!TryRead(out item, out index))
                 return false;
+            Index--;
             Unread(item);
             return true;
         }
@@ -66,38 +72,41 @@ namespace Largs
         public T Read() =>
             TryRead(out var item) ? item : throw new InvalidOperationException();
 
-        public bool TryRead(out T item)
+        public bool TryRead(out T item) =>
+            TryRead(out item, out _);
+
+        public bool TryRead(out T item, out int index)
         {
+            index = Index;
             var (hasNext, next) = _next;
 
             if (hasNext)
             {
                 item = next;
                 _next = default;
-                return true;
             }
-
-            if (_nextItems?.Count > 0)
+            else if (_nextItems?.Count > 0)
             {
                 item = _nextItems.Pop();
-                return true;
             }
-
-            if (_enumerator == null)
+            else if (_enumerator == null)
             {
                 item = default;
                 return false;
             }
-
-            if (!_enumerator.MoveNext())
+            else if (!_enumerator.MoveNext())
             {
                 _enumerator.Dispose();
                 _enumerator = null;
                 item = default;
                 return false;
             }
+            else
+            {
+                item = _enumerator.Current;
+            }
 
-            item = _enumerator.Current;
+            Index++;
             return true;
         }
     }
