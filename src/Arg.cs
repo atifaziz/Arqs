@@ -26,14 +26,21 @@ namespace Largs
         IArg WithProperties(PropertySet value);
         IParser Parser { get; }
         IAccumulator CreateAccumulator();
+        T Accept<T>(IArgVisitor<T> visitor);
     }
 
-    public interface IFlagArg    {}
-    public interface IOptionArg  {}
-    public interface IOperandArg {}
-    public interface ILiteralArg {}
-    public interface ITailArg    {}
-    public interface IListArg    {}
+    public interface IArgVisitor<out R>
+    {
+        R Visit<T, V, A>(IArg<T, V, A> arg);
+    }
+
+    public interface IArgTrait   {}
+    public interface IFlagArg    : IArgTrait {}
+    public interface IOptionArg  : IArgTrait {}
+    public interface IOperandArg : IArgTrait {}
+    public interface ILiteralArg : IArgTrait {}
+    public interface ITailArg    : IArgTrait {}
+    public interface IListArg    : IArgTrait {}
 
     public interface IArg<out T, V, A> : IArg, IArgBinder<T>
     {
@@ -71,6 +78,9 @@ namespace Largs
         public IParser<V> Parser { get; }
 
         IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
+
+        R IArg.Accept<R>(IArgVisitor<R> visitor) => visitor.Visit(this);
+
         public IAccumulator<T> CreateAccumulator() => _accumulatorFactory();
 
         object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
@@ -212,5 +222,25 @@ namespace Largs
                    }),
                    r => r.Value)
                 .WithProperties(arg.Properties);
+
+        public static bool IsFlag   (this IArg arg) => arg.Is<IFlagArg   >();
+        public static bool IsOption (this IArg arg) => arg.Is<IOptionArg >();
+        public static bool IsOperand(this IArg arg) => arg.Is<IOperandArg>();
+        public static bool IsLiteral(this IArg arg) => arg.Is<ILiteralArg>();
+        public static bool IsTail   (this IArg arg) => arg.Is<ITailArg   >();
+        public static bool IsList   (this IArg arg) => arg.Is<IListArg   >();
+
+        static bool Is<T>(this IArg arg) where T : IArgTrait =>
+            arg.Accept(ArgTypeVisitor.Instance) is var (_, _, t) && t == typeof(T);
+
+        sealed class ArgTypeVisitor : IArgVisitor<(Type, Type, Type)>
+        {
+            public static readonly IArgVisitor<(Type, Type, Type)> Instance = new ArgTypeVisitor();
+
+            ArgTypeVisitor() {}
+
+            (Type, Type, Type) IArgVisitor<(Type, Type, Type)>.Visit<T, V, A>(IArg<T, V, A> _) =>
+                (typeof(T), typeof(V), typeof(A));
+        }
     }
 }
