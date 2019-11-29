@@ -185,6 +185,14 @@ namespace Largs
         public static IParser<DateTime> DateTime(string format) => Parsers.DateTime.WithOptions(Parsers.DateTime.Options.WithFormats(ImmutableArray.Create(format)));
         public static IParser<string> String() => Parsers.Id;
 
+        public static IParser<bool> Boolean(string trueString, string falseString) =>
+            Boolean(trueString, falseString, StringComparison.Ordinal);
+
+        public static IParser<bool> Boolean(string trueString, string falseString, StringComparison comparison) =>
+            Create(s => string.Equals(s, trueString, comparison) ? ParseResult.Success(true)
+                      : string.Equals(s, falseString, comparison) ? ParseResult.Success(false)
+                      : default);
+
         public static IParser<string> Literal(string value) =>
             Literal(value, StringComparison.Ordinal);
 
