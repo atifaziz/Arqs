@@ -31,6 +31,7 @@ namespace Largs
     public interface IFlagArg    {}
     public interface IOptionArg  {}
     public interface IOperandArg {}
+    public interface ILiteralArg {}
     public interface ITailArg    {}
     public interface IListArg    {}
 
@@ -118,6 +119,7 @@ namespace Largs
         static readonly IOptionArg OptionArg   = null;
         static readonly IFlagArg FlagArg       = null;
         static readonly IOperandArg OperandArg = null;
+        static readonly ILiteralArg LiteralArg = null;
         static readonly IListArg ListArg       = null;
         static readonly ITailArg TailArg       = null;
 
@@ -146,6 +148,14 @@ namespace Largs
 
         public static IArg<T, T, IOperandArg> Operand<T>(string name, IParser<T> parser) =>
             Operand(name, default, parser);
+        public static IArg<string, string, ILiteralArg> Literal(string value) =>
+            Literal(value, StringComparison.Ordinal);
+
+        public static IArg<string, string, ILiteralArg> Literal(string value, StringComparison comparison)
+        {
+            var parser = Parser.Literal(value, comparison);
+            return Create(LiteralArg, parser, () => Accumulator.Value(parser), r => r.Value);
+        }
 
         public static IArg<ImmutableArray<T>, T, IListArg> List<T>(this IArg<T, T, IOperandArg> arg) =>
             List<T, IOperandArg>(arg);
