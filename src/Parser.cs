@@ -201,7 +201,8 @@ namespace Largs
 
         public static IParser<T> Range<T>(this IParser<T> parser, T min, T max) where T : IComparable<T> =>
             from v in parser
-            select v.CompareTo(min) >= 0 && v.CompareTo(max) <= 0 ? v : throw new Exception();
+            where v.CompareTo(min) >= 0 && v.CompareTo(max) <= 0
+            select v;
 
         public static IParser<T> Cast<T>(this IParser parser) =>
             Create(s => parser.Parse(s) is (true, var v) ? ParseResult.Success((T)v) : default);
