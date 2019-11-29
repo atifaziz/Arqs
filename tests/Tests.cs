@@ -26,11 +26,12 @@ namespace Largs.Tests
         public void Test1()
         {
             var help    = from f in Arg.Flag("h") select (f, 1);
-            var version = from f in Arg.Flag("v") select (f, 2);
+            var version = from f in Arg.Flag("V") select (f, 2);
 
             var args =
                 from h    in help
                 join v    in version on 1 equals 1
+                join vl   in Arg.CountedFlag("v") on 1 equals 1
                 join foo  in Arg.Option("foo", -1, Parser.Int32()).List() on 1 equals 1
                 join bar  in Arg.Flag("bar")  on 1 equals 1
                 join baz  in Arg.Option("baz", Parser.Int32().Nullable())  on 1 equals 1
@@ -38,17 +39,18 @@ namespace Largs.Tests
                 join xs   in Arg.Option("x", Parser.String()).List() on 1 equals 1
                 join pos1 in Arg.Operand("x", Parser.String()) on 1 equals 1
                 join pos2 in Arg.Operand("x", Parser.String()) on 1 equals 1
-                select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs), Pos1 = pos1, Pos2 = pos2 }
+                select new { Verbosity = vl, Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs), Pos1 = pos1, Pos2 = pos2 }
                 into e
                 select (3, e);
 
-            var commandLine = "1 --bar --foo 4 2 hello --foo 2 -x one -x two world -x three".Split();
+            var commandLine = "1 --bar -v -v -v --foo 4 2 hello --foo 2 -x one -x two world -x three".Split();
 
             var (mode, result, tail) =
                 ArgBinder.Bind(help, version, args, commandLine);
 
             Assert.That(mode, Is.EqualTo(3));
 
+            Assert.That(result.Verbosity, Is.EqualTo(3));
             Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
             Assert.That(result.Bar, Is.True);
             Assert.That(result.Baz, Is.Null);
@@ -60,6 +62,7 @@ namespace Largs.Tests
 
             var infos = new Queue<IArg>(args.Inspect());
             Assert.That(infos.Dequeue().Name, Is.EqualTo("h"));
+            Assert.That(infos.Dequeue().Name, Is.EqualTo("V"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("v"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("foo"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
@@ -71,14 +74,14 @@ namespace Largs.Tests
 
             (mode, result, tail) =
                 ArgBinder.Bind(help, version, args,
-                               commandLine.Prepend("-h").Prepend("-v").ToArray());
+                               commandLine.Prepend("-h").Prepend("-V").ToArray());
 
             Assert.That(mode, Is.EqualTo(1));
-            Assert.That(tail, Is.EqualTo(commandLine.Prepend("-v")));
+            Assert.That(tail, Is.EqualTo(commandLine.Prepend("-V")));
 
             (mode, result, tail) =
                 ArgBinder.Bind(help, version, args,
-                               commandLine.Prepend("-v").ToArray());
+                               commandLine.Prepend("-V").ToArray());
 
             Assert.That(mode, Is.EqualTo(2));
             Assert.That(tail, Is.EqualTo(commandLine));

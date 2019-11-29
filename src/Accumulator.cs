@@ -35,9 +35,6 @@ namespace Largs
         public static IAccumulator<T> Value<T>(IParser<T> parser) =>
             Create<T>(default, (_, arg) => arg.TryRead(out var v) ? parser.Parse(v) : default);
 
-        public static IAccumulator<int> Flag() =>
-            Create(0, (count, _) => ParseResult.Success(count + 1));
-
         public static IAccumulator<T> Value<T>(IParser<T> parser, T seed, Func<T, T, T> folder) =>
             Create(seed, (acc, arg) => arg.TryRead(out var s) && parser.Parse(s) is (true, var v)
                                      ? ParseResult.Success(folder(acc, v)) : default);

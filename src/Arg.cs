@@ -139,11 +139,19 @@ namespace Largs
                          Func<IAccumulator<T>, T> binder) =>
             new Arg<T, V, A>(parser, accumulatorFactory, binder);
 
+        public static readonly IParser<bool> BooleanPlusMinusParser = Parser.Boolean("+", "-");
+        public static readonly IParser<int> BinaryPlusMinusParser = from f in BooleanPlusMinusParser select f ? 1 : 0;
+
         public static IArg<bool, bool, IFlagArg> Flag(string name) =>
-            Create(FlagArg,
-                   Parser.Create<bool>(_ => throw new NotSupportedException()),
-                   () => from x in Accumulator.Flag() select x > 0,
+            Create(FlagArg, BooleanPlusMinusParser,
+                   () => Accumulator.Value(BooleanPlusMinusParser),
                    r => r.HasValue)
+                .WithName(name);
+
+        public static IArg<int, int, IFlagArg> CountedFlag(string name) =>
+            Create(FlagArg, BinaryPlusMinusParser,
+                   () => Accumulator.Value(BinaryPlusMinusParser, 0, (acc, f) => acc + f),
+                   r => r.Value)
                 .WithName(name);
 
         public static IArg<T, T, IOptionArg> Option<T>(string name, T @default, IParser<T> parser) =>

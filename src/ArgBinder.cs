@@ -105,6 +105,8 @@ namespace Largs
                     else
                     {
                         e.Read();
+                        if (infos[i].IsFlag())
+                            e.Unread("+");
                         if (!values[i].Read(e))
                             throw new Exception("Invalid value for option: " + name);
                     }
@@ -143,6 +145,8 @@ namespace Largs
                         else
                         {
                             e.Read();
+                            if (infos[i].IsFlag())
+                                e.Unread("+");
                             if (!values[i].Read(e))
                                 throw new Exception("Invalid value for option: " + ch);
                         }
