@@ -143,11 +143,12 @@ namespace Largs
         public static IArg<T, T, IOptionArg> Option<T>(string name, IParser<T> parser) =>
             Option(name, default, parser);
 
+        public static IArg<T, T, IOperandArg> Operand<T>(string name, IParser<T> parser) =>
+            Operand(name, default, parser);
+
         public static IArg<T, T, IOperandArg> Operand<T>(string name, T @default, IParser<T> parser) =>
             Create(OperandArg, parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default);
 
-        public static IArg<T, T, IOperandArg> Operand<T>(string name, IParser<T> parser) =>
-            Operand(name, default, parser);
         public static IArg<string, string, ILiteralArg> Literal(string value) =>
             Literal(value, StringComparison.Ordinal);
 
