@@ -186,7 +186,10 @@ namespace Largs
         public static IParser<string> String() => Parsers.Id;
 
         public static IParser<string> Literal(string value) =>
-            Create(s => s == value ? ParseResult.Success(s) : default);
+            Literal(value, StringComparison.Ordinal);
+
+        public static IParser<string> Literal(string value, StringComparison comparison) =>
+            Create(s => string.Equals(s, value, comparison) ? ParseResult.Success(s) : default);
 
         public static IParser<T> Range<T>(this IParser<T> parser, T min, T max) where T : IComparable<T> =>
             from v in parser
