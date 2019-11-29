@@ -19,6 +19,12 @@ namespace Largs
     using System;
     using System.Collections.Generic;
 
+    public static class Reader
+    {
+        public static Reader<T> Read<T>(this IEnumerable<T> items) =>
+            new Reader<T>(items);
+    }
+
     public sealed class Reader<T> : IDisposable
     {
         (bool, T) _next;

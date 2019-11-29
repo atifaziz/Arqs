@@ -79,7 +79,7 @@ namespace Largs
             var values = new IAccumulator[infos.Count];
             for (var i = 0; i < infos.Count; i++)
                 values[i] = infos[i].CreateAccumulator();
-            using var e = new Reader<string>(args);
+            using var e = args.Read();
             var tail = new List<string>();
             while (e.TryPeek(out var arg))
             {
