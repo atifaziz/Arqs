@@ -126,17 +126,19 @@ namespace Largs.Tests
         public void Test3()
         {
             var args =
-                from foo  in Arg.Option("foo", -1, Parser.Int32()).List()
-                join bar  in Arg.Flag("bar").FlagPresence() on 1 equals 1
-                join baz  in Arg.Option("baz", Parser.Int32()).FlagPresence() on 1 equals 1
-                select new { Foo = foo, Bar = bar, Baz = baz };
+                from foo in Arg.Flag("foo").FlagPresence()
+                join bar in Arg.Option("bar", -1, Parser.Int32()).List() on 1 equals 1
+                join baz in Arg.Option("baz", Parser.Int32()).FlagPresence() on 1 equals 1
+                join qux in Arg.Option("qux", "default", Parser.String()).FlagPresence() on 1 equals 1
+                select new { Foo = foo, Bar = bar, Baz = baz, Qux = qux };
 
-            var commandLine = "--foo 4 --foo 2 --baz 42 --bar".Split();
+            var commandLine = "--bar 4 --bar 2 --baz 42 --qux quux".Split();
             var (result, tail) = args.Bind(commandLine);
 
-            Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
-            Assert.That(result.Bar, Is.EqualTo((true, true)));
+            Assert.That(result.Foo, Is.EqualTo((false, false)));
+            Assert.That(result.Bar, Is.EqualTo(new[] { 4, 2 }));
             Assert.That(result.Baz, Is.EqualTo((true, 42)));
+            Assert.That(result.Qux, Is.EqualTo((true, "quux")));
             Assert.That(tail, Is.Empty);
 
             var infos = new Queue<IArg>(args.Inspect());
