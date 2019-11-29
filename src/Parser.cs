@@ -218,6 +218,9 @@ namespace Largs
         public static IParser<U> Select<T, U>(this IParser<T> parser, Func<T, U> f) =>
             Create(args => parser.Parse(args) is (true, var v) ? ParseResult.Success(f(v)) : default);
 
+        public static IParser<T> Where<T>(this IParser<T> parser, Func<T, bool> predicate) =>
+            Create(args => parser.Parse(args) is (true, var v) && predicate(v) ? ParseResult.Success(v) : default);
+
         public static IParser<U> SelectMany<T, U>(this IParser<T> parser, Func<T, IParser<U>> f) =>
             Create(args => parser.Parse(args) is (true, var v) ? f(v).Parse(args) : default);
 
