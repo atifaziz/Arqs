@@ -24,6 +24,7 @@ namespace Largs
     {
         PropertySet Properties { get; }
         IArg WithProperties(PropertySet value);
+        IParser Parser { get; }
         IAccumulator CreateAccumulator();
     }
 
@@ -33,21 +34,22 @@ namespace Largs
     public interface ITailArg    {}
     public interface IListArg    {}
 
-    public interface IArg<out T, A> : IArg, IArgBinder<T>
+    public interface IArg<out T, V, A> : IArg, IArgBinder<T>
     {
-        new IArg<T, A> WithProperties(PropertySet value);
+        new IParser<V> Parser { get; }
+        new IArg<T, V, A> WithProperties(PropertySet value);
         new IAccumulator<T> CreateAccumulator();
     }
 
-    public class Arg<T, A> : IArg<T, A>
+    sealed class Arg<T, V, A> : IArg<T, V, A>
     {
         readonly Func<IAccumulator<T>> _accumulatorFactory;
         readonly Func<IAccumulator<T>, T> _binder;
 
-        public Arg(IParser<T> parser, Func<IAccumulator<T>> accumulatorFactory, Func<IAccumulator<T>, T> binder) :
+        public Arg(IParser<V> parser, Func<IAccumulator<T>> accumulatorFactory, Func<IAccumulator<T>, T> binder) :
             this(PropertySet.Empty, parser, accumulatorFactory, binder) {}
 
-        public Arg(PropertySet properties, IParser<T> parser, Func<IAccumulator<T>> accumulatorFactory, Func<IAccumulator<T>, T> binder)
+        public Arg(PropertySet properties, IParser<V> parser, Func<IAccumulator<T>> accumulatorFactory, Func<IAccumulator<T>, T> binder)
         {
             Properties = properties ?? throw new ArgumentNullException(nameof(properties));
             _accumulatorFactory = accumulatorFactory ?? throw new ArgumentNullException(nameof(accumulatorFactory));
@@ -58,26 +60,17 @@ namespace Largs
         public PropertySet Properties { get; }
 
         IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
-        IArg<T, A> IArg<T, A>.WithProperties(PropertySet value) => WithProperties(value);
+        IArg<T, V, A> IArg<T, V, A>.WithProperties(PropertySet value) => WithProperties(value);
 
-        public Arg<T, A> WithProperties(PropertySet value) =>
-            Properties == value ? this : new Arg<T, A>(value, Parser, _accumulatorFactory, _binder);
+        public Arg<T, V, A> WithProperties(PropertySet value) =>
+            Properties == value ? this : new Arg<T, V, A>(value, Parser, _accumulatorFactory, _binder);
 
-        public IParser<T> Parser { get; }
+        IParser IArg.Parser => Parser;
+
+        public IParser<V> Parser { get; }
 
         IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
         public IAccumulator<T> CreateAccumulator() => _accumulatorFactory();
-
-        public Arg<(bool Present, T Value), A> FlagPresence() =>
-            FlagPresence(false, true);
-
-        public Arg<(TPresence Presence, T Value), A> FlagPresence<TPresence>(TPresence absent, TPresence present) =>
-            new Arg<(TPresence, T), A>(
-                Properties,
-                from v in Parser select (present, v),
-                () => from v in _accumulatorFactory()
-                      select (Presence: present, Value: v),
-                r => r.HasValue ? (present, _binder(Accumulator.Return(r.Value.Item2))) : (absent, default));
 
         object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
 
@@ -128,44 +121,56 @@ namespace Largs
         static readonly IListArg ListArg       = null;
         static readonly ITailArg TailArg       = null;
 
-        static Arg<T, A>
-            Create<T, A>(A _, IParser<T> parser,
+        static IArg<T, V, A>
+            Create<T, V, A>(A _, IParser<V> parser,
                          Func<IAccumulator<T>> accumulatorFactory,
                          Func<IAccumulator<T>, T> binder) =>
-            new Arg<T, A>(parser, accumulatorFactory, binder);
+            new Arg<T, V, A>(parser, accumulatorFactory, binder);
 
-        public static Arg<bool, IFlagArg> Flag(string name) =>
+        public static IArg<bool, bool, IFlagArg> Flag(string name) =>
             Create(FlagArg,
                    Parser.Create<bool>(_ => throw new NotSupportedException()),
                    () => from x in Accumulator.Flag() select x > 0,
                    r => r.HasValue)
                 .WithName(name);
 
-        public static Arg<T, IOptionArg> Option<T>(string name, T @default, IParser<T> parser) =>
+        public static IArg<T, T, IOptionArg> Option<T>(string name, T @default, IParser<T> parser) =>
             Create(OptionArg, parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default)
                 .WithName(name);
 
-        public static Arg<T, IOptionArg> Option<T>(string name, IParser<T> parser) =>
+        public static IArg<T, T, IOptionArg> Option<T>(string name, IParser<T> parser) =>
             Option(name, default, parser);
 
-        public static Arg<T, IOperandArg> Operand<T>(string name, T @default, IParser<T> parser) =>
+        public static IArg<T, T, IOperandArg> Operand<T>(string name, T @default, IParser<T> parser) =>
             Create(OperandArg, parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default);
 
-        public static Arg<T, IOperandArg> Operand<T>(string name, IParser<T> parser) =>
+        public static IArg<T, T, IOperandArg> Operand<T>(string name, IParser<T> parser) =>
             Operand(name, default, parser);
 
-        public static IArg<ImmutableArray<T>, IListArg> List<T>(this IArg<T, IOperandArg> arg) =>
+        public static IArg<ImmutableArray<T>, T, IListArg> List<T>(this IArg<T, T, IOperandArg> arg) =>
             List<T, IOperandArg>(arg);
 
-        public static IArg<ImmutableArray<T>, IListArg> List<T>(this IArg<T, IOptionArg> arg) =>
+        public static IArg<ImmutableArray<T>, T, IListArg> List<T>(this IArg<T, T, IOptionArg> arg) =>
             List<T, IOptionArg>(arg);
 
-        public static IArg<ImmutableArray<T>, IListArg> List<T>(this IArg<T, IFlagArg> arg) =>
+        public static IArg<ImmutableArray<T>, T, IListArg> List<T>(this IArg<T, T, IFlagArg> arg) =>
             List<T, IFlagArg>(arg);
 
-        static IArg<ImmutableArray<T>, IListArg> List<T, A>(IArg<T, A> arg) =>
+        public static IArg<(bool Present, T Value), (bool Present, T Value), A>
+            FlagPresence<T, A>(this IArg<T, T, A> arg) => arg.FlagPresence(false, true);
+
+        public static IArg<(P Presence, T Value), (P Presence, T Value), A>
+            FlagPresence<T, P, A>(this IArg<T, T, A> arg, P absent, P present) =>
+            Create(default(A),
+                   from v in arg.Parser select (present, v),
+                   () => from v in arg.CreateAccumulator()
+                         select (Presence: present, Value: v),
+                   r => r.HasValue ? (present, arg.Bind(_ => Accumulator.Return(r.Value.Item2))) : (absent, default))
+                .WithProperties(arg.Properties);
+
+        static IArg<ImmutableArray<T>, T, IListArg> List<T, A>(IArg<T, T, A> arg) =>
             Create(ListArg,
-                   Parser.Create<ImmutableArray<T>>(_ => throw new NotImplementedException()),
+                   arg.Parser,
                    () => Accumulator.Create(ImmutableArray<T>.Empty, (seed, args) =>
                    {
                        var array = seed.ToBuilder();
@@ -178,10 +183,10 @@ namespace Largs
                    r => r.Value)
                 .WithProperties(arg.Properties);
 
-        public static IArg<ImmutableArray<T>, ITailArg> Tail<T, A>(this IArg<T, A> arg)
+        public static IArg<ImmutableArray<T>, T, ITailArg> Tail<T, A>(this IArg<T, T, A> arg)
             where A : IOperandArg =>
             Create(TailArg,
-                   Parser.Create<ImmutableArray<T>>(_ => throw new NotImplementedException()),
+                   arg.Parser,
                    () => Accumulator.Create(ImmutableArray<T>.Empty, (seed, args) =>
                    {
                        var array = seed.ToBuilder();
