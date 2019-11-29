@@ -27,13 +27,19 @@ namespace Largs
         IAccumulator CreateAccumulator();
     }
 
-    public interface IArg<out T> : IArg, IArgBinder<T>
+    public interface IFlagArg    {}
+    public interface IOptionArg  {}
+    public interface IOperandArg {}
+    public interface ITailArg    {}
+    public interface IListArg    {}
+
+    public interface IArg<out T, A> : IArg, IArgBinder<T>
     {
-        new IArg<T> WithProperties(PropertySet value);
+        new IArg<T, A> WithProperties(PropertySet value);
         new IAccumulator<T> CreateAccumulator();
     }
 
-    public class Arg<T> : IArg<T>
+    public class Arg<T, A> : IArg<T, A>
     {
         readonly Func<IAccumulator<T>> _accumulatorFactory;
         readonly Func<IAccumulator<T>, T> _binder;
@@ -52,119 +58,31 @@ namespace Largs
         public PropertySet Properties { get; }
 
         IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
-        IArg<T> IArg<T>.WithProperties(PropertySet value) => WithProperties(value);
+        IArg<T, A> IArg<T, A>.WithProperties(PropertySet value) => WithProperties(value);
 
-        public Arg<T> WithProperties(PropertySet value) =>
-            Properties == value ? this : new Arg<T>(value, Parser, _accumulatorFactory, _binder);
+        public Arg<T, A> WithProperties(PropertySet value) =>
+            Properties == value ? this : new Arg<T, A>(value, Parser, _accumulatorFactory, _binder);
 
         public IParser<T> Parser { get; }
 
         IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
         public IAccumulator<T> CreateAccumulator() => _accumulatorFactory();
 
-        public Arg<(bool Present, T Value)> FlagPresence() =>
+        public Arg<(bool Present, T Value), A> FlagPresence() =>
             FlagPresence(false, true);
 
-        public Arg<(TPresence Presence, T Value)> FlagPresence<TPresence>(TPresence absent, TPresence present) =>
-            new Arg<(TPresence, T)>(Properties,
-                                    from v in Parser select (present, v),
-                                    () => from v in _accumulatorFactory()
-                                          select (Presence: present, Value: v),
-                                    r => r.HasValue ? (present, _binder(Accumulator.Return(r.Value.Item2))) : (absent, default));
+        public Arg<(TPresence Presence, T Value), A> FlagPresence<TPresence>(TPresence absent, TPresence present) =>
+            new Arg<(TPresence, T), A>(
+                Properties,
+                from v in Parser select (present, v),
+                () => from v in _accumulatorFactory()
+                      select (Presence: present, Value: v),
+                r => r.HasValue ? (present, _binder(Accumulator.Return(r.Value.Item2))) : (absent, default));
 
         object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
 
         public T Bind(Func<IArg, IAccumulator> source) =>
             _binder((IAccumulator<T>)source(this));
-
-        public IEnumerable<IArg> Inspect() { yield return this; }
-    }
-
-    public class ListArg<T> : IArg<ImmutableArray<T>>
-    {
-        readonly Arg<T> _arg;
-
-        public ListArg(Arg<T> arg) : this(arg?.Properties, arg) {}
-
-        public ListArg(PropertySet properties, Arg<T> arg)
-        {
-            _arg = arg ?? throw new ArgumentNullException(nameof(arg));
-            Properties = properties ?? throw new ArgumentNullException(nameof(properties));
-        }
-
-        public PropertySet Properties { get; }
-
-        IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
-        IArg<ImmutableArray<T>> IArg<ImmutableArray<T>>.WithProperties(PropertySet value) => WithProperties(value);
-
-        public ListArg<T> WithProperties(PropertySet value) =>
-            Properties == value ? this : new ListArg<T>(value, _arg);
-
-        public IParser<T> ItemParser => _arg.Parser;
-
-        IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
-
-        public IAccumulator<ImmutableArray<T>> CreateAccumulator() =>
-            Accumulator.Create(ImmutableArray<T>.Empty, (seed, arg) =>
-            {
-                var array = seed.ToBuilder();
-                var reader = _arg.CreateAccumulator();
-                if (!reader.Read(arg))
-                    return default;
-                array.Add(_arg.Bind(_ => reader));
-                return ParseResult.Success(array.ToImmutable());
-            });
-
-        object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
-
-        public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
-            (ImmutableArray<T>)source(this).Value;
-
-        public IEnumerable<IArg> Inspect() { yield return this; }
-    }
-
-    public class TailArg<T> : IArg<ImmutableArray<T>>
-    {
-        readonly Arg<T> _arg;
-
-        public TailArg(Arg<T> arg) : this(arg?.Properties, arg) { }
-
-        public TailArg(PropertySet properties, Arg<T> arg)
-        {
-            _arg = arg ?? throw new ArgumentNullException(nameof(arg));
-            Properties = properties ?? throw new ArgumentNullException(nameof(properties));
-        }
-
-        public PropertySet Properties { get; }
-
-        IArg IArg.WithProperties(PropertySet value) => WithProperties(value);
-        IArg<ImmutableArray<T>> IArg<ImmutableArray<T>>.WithProperties(PropertySet value) => WithProperties(value);
-
-        public TailArg<T> WithProperties(PropertySet value) =>
-            Properties == value ? this : new TailArg<T>(value, _arg);
-
-        public IParser<T> ItemParser => _arg.Parser;
-
-        IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
-
-        public IAccumulator<ImmutableArray<T>> CreateAccumulator() =>
-            Accumulator.Create(ImmutableArray<T>.Empty, (seed, arg) =>
-            {
-                var array = seed.ToBuilder();
-                while (arg.HasMore())
-                {
-                    var reader = _arg.CreateAccumulator();
-                    if (!reader.Read(arg))
-                        return default;
-                    array.Add(_arg.Bind(_ => reader));
-                }
-                return ParseResult.Success(array.ToImmutable());
-            });
-
-        object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
-
-        public ImmutableArray<T> Bind(Func<IArg, IAccumulator> source) =>
-            ((ImmutableArray<T>)source(this).Value);
 
         public IEnumerable<IArg> Inspect() { yield return this; }
     }
@@ -204,34 +122,79 @@ namespace Largs
 
     public partial class Arg
     {
-        public static Arg<T> Create<T>(IParser<T> parser,
-                                       Func<IAccumulator<T>> accumulatorFactory,
-                                       Func<IAccumulator<T>, T> binder) =>
-            new Arg<T>(parser, accumulatorFactory, binder);
+        static readonly IOptionArg OptionArg   = null;
+        static readonly IFlagArg FlagArg       = null;
+        static readonly IOperandArg OperandArg = null;
+        static readonly IListArg ListArg       = null;
+        static readonly ITailArg TailArg       = null;
 
-        public static Arg<bool> Flag(string name) =>
-            Create(Parser.Create<bool>(_ => throw new NotSupportedException()),
-                                       () => from x in Accumulator.Flag() select x > 0,
-                                       r => r.HasValue)
+        static Arg<T, A>
+            Create<T, A>(A _, IParser<T> parser,
+                         Func<IAccumulator<T>> accumulatorFactory,
+                         Func<IAccumulator<T>, T> binder) =>
+            new Arg<T, A>(parser, accumulatorFactory, binder);
+
+        public static Arg<bool, IFlagArg> Flag(string name) =>
+            Create(FlagArg,
+                   Parser.Create<bool>(_ => throw new NotSupportedException()),
+                   () => from x in Accumulator.Flag() select x > 0,
+                   r => r.HasValue)
                 .WithName(name);
 
-        public static Arg<T> Option<T>(string name, T @default, IParser<T> parser) =>
-            Create(parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default)
+        public static Arg<T, IOptionArg> Option<T>(string name, T @default, IParser<T> parser) =>
+            Create(OptionArg, parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default)
                 .WithName(name);
 
-        public static Arg<T> Option<T>(string name, IParser<T> parser) =>
+        public static Arg<T, IOptionArg> Option<T>(string name, IParser<T> parser) =>
             Option(name, default, parser);
 
-        public static Arg<T> Operand<T>(string name, T @default, IParser<T> parser) =>
-            Create(parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default);
+        public static Arg<T, IOperandArg> Operand<T>(string name, T @default, IParser<T> parser) =>
+            Create(OperandArg, parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default);
 
-        public static Arg<T> Operand<T>(string name, IParser<T> parser) =>
+        public static Arg<T, IOperandArg> Operand<T>(string name, IParser<T> parser) =>
             Operand(name, default, parser);
 
-        public static TailArg<T> Tail<T>(this Arg<T> arg) =>
-            new TailArg<T>(arg);
+        public static IArg<ImmutableArray<T>, IListArg> List<T>(this IArg<T, IOperandArg> arg) =>
+            List<T, IOperandArg>(arg);
 
-        public static ListArg<T> List<T>(this Arg<T> arg) =>
-            new ListArg<T>(arg);
+        public static IArg<ImmutableArray<T>, IListArg> List<T>(this IArg<T, IOptionArg> arg) =>
+            List<T, IOptionArg>(arg);
+
+        public static IArg<ImmutableArray<T>, IListArg> List<T>(this IArg<T, IFlagArg> arg) =>
+            List<T, IFlagArg>(arg);
+
+        static IArg<ImmutableArray<T>, IListArg> List<T, A>(IArg<T, A> arg) =>
+            Create(ListArg,
+                   Parser.Create<ImmutableArray<T>>(_ => throw new NotImplementedException()),
+                   () => Accumulator.Create(ImmutableArray<T>.Empty, (seed, args) =>
+                   {
+                       var array = seed.ToBuilder();
+                       var accumulator = arg.CreateAccumulator();
+                       if (!accumulator.Read(args))
+                           return default;
+                       array.Add(arg.Bind(_ => accumulator));
+                       return ParseResult.Success(array.ToImmutable());
+                   }),
+                   r => r.Value)
+                .WithProperties(arg.Properties);
+
+        public static IArg<ImmutableArray<T>, ITailArg> Tail<T, A>(this IArg<T, A> arg)
+            where A : IOperandArg =>
+            Create(TailArg,
+                   Parser.Create<ImmutableArray<T>>(_ => throw new NotImplementedException()),
+                   () => Accumulator.Create(ImmutableArray<T>.Empty, (seed, args) =>
+                   {
+                       var array = seed.ToBuilder();
+                       while (args.HasMore())
+                       {
+                           var reader = arg.CreateAccumulator();
+                           if (!reader.Read(args))
+                               return default;
+                           array.Add(arg.Bind(_ => reader));
+                       }
+                       return ParseResult.Success(array.ToImmutable());
+                   }),
+                   r => r.Value)
+                .WithProperties(arg.Properties);
     }
 }
