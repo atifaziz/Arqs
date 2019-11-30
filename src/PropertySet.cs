@@ -49,7 +49,7 @@ namespace Largs
 
         public object this[Symbol key] => _properties.TryGetValue(key, out var value) ? value : null;
 
-        public PropertySet With(Symbol key, object value) =>
-            this[key] == value ? this : new PropertySet(_properties.Add(key, value));
+        public PropertySet Set(Symbol key, object value) =>
+            this[key] == value ? this : new PropertySet(_properties.SetItem(key, value));
     }
 }

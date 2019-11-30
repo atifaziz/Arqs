@@ -115,7 +115,7 @@ namespace Largs
             (T)arg.WithProperties(arg.Properties.WithName(value));
 
         public static PropertySet WithName(this PropertySet properties, string value) =>
-            properties.With(Symbols.Name, value);
+            properties.Set(Symbols.Name, value);
 
         public static ShortOptionName ShortName(this IArg arg) =>
             arg.Properties.ShortName();
@@ -127,7 +127,7 @@ namespace Largs
             (T)arg.WithProperties(arg.Properties.WithShortName(value));
 
         public static PropertySet WithShortName(this PropertySet properties, ShortOptionName value) =>
-            properties.With(Symbols.ShortName, value);
+            properties.Set(Symbols.ShortName, value);
 
         public static string Description(this IArg arg) =>
             (string)arg.Properties[Symbols.Description];
@@ -139,7 +139,7 @@ namespace Largs
             (T)arg.WithProperties(arg.Properties.WithDescription(value));
 
         public static PropertySet WithDescription(this PropertySet properties, string value) =>
-            properties.With(Symbols.Description, value);
+            properties.Set(Symbols.Description, value);
     }
 
     public partial class Arg
