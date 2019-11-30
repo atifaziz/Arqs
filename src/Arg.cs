@@ -123,8 +123,14 @@ namespace Largs
         public static ShortOptionName ShortName(this PropertySet properties) =>
             (ShortOptionName)properties[Symbols.ShortName];
 
+        public static T WithShortName<T>(this T arg, char value) where T : IArg =>
+            arg.WithShortName(ShortOptionName.From(value));
+
         public static T WithShortName<T>(this T arg, ShortOptionName value) where T : IArg =>
             (T)arg.WithProperties(arg.Properties.WithShortName(value));
+
+        public static PropertySet WithShortName(this PropertySet properties, char value) =>
+            properties.WithShortName(ShortOptionName.From(value));
 
         public static PropertySet WithShortName(this PropertySet properties, ShortOptionName value) =>
             properties.Set(Symbols.ShortName, value);
