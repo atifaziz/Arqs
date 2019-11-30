@@ -135,7 +135,7 @@ namespace Largs
         public static string Description(this PropertySet properties) =>
             (string)properties[Symbols.Description];
 
-        public static IArg WithDescription<T>(this T arg, string value) where T : IArg =>
+        public static T WithDescription<T>(this T arg, string value) where T : IArg =>
             (T)arg.WithProperties(arg.Properties.WithDescription(value));
 
         public static PropertySet WithDescription(this PropertySet properties, string value) =>
