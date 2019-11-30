@@ -74,102 +74,85 @@ namespace Largs
         static (T Result, ImmutableArray<string> Tail)
             Bind<T>(this IArgBinder<T> binder, BindMode mode, params string[] args)
         {
-            var infos = binder.Inspect().ToList();
+            var specs = binder.Inspect().ToList();
+
+            var accumulators = new IAccumulator[specs.Count];
+            for (var i = 0; i < specs.Count; i++)
+                accumulators[i] = specs[i].CreateAccumulator();
+
             var asi = 0;
-            var values = new IAccumulator[infos.Count];
-            for (var i = 0; i < infos.Count; i++)
-                values[i] = infos[i].CreateAccumulator();
-            using var e = args.Read();
             var tail = new List<string>();
-            while (e.TryPeek(out var arg))
+
+            using var reader = args.Read();
+            while (reader.TryPeek(out var arg))
             {
+                string name = null;
                 if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
-                    var name = arg.Substring(2);
-                    var i = infos.FindIndex(e => e.Name() == name);
-                    if (i < 0)
-                    {
-                        i = infos.FindIndex(asi, e => e.Name() == null);
-                        if (i < 0)
-                        {
-                            e.Read();
-                            tail.Add(arg);
-                        }
-                        else
-                        {
-                            asi = i + 1;
-                            if (!values[i].Read(e))
-                                throw new Exception("Invalid argument: " + arg);
-                        }
-                    }
-                    else
-                    {
-                        e.Read();
-                        if (infos[i].IsFlag())
-                            e.Unread("+");
-                        if (!values[i].Read(e))
-                            throw new Exception("Invalid value for option: " + name);
-                    }
+                    name = arg.Substring(2);
                 }
                 else if (arg.Length > 1 && arg[0] == '-')
                 {
                     if (arg.Length > 2)
                     {
-                        e.Read();
+                        reader.Read();
                         foreach (var ch in arg.Substring(1).Reverse())
                         {
-                            var i = infos.FindIndex(e => e.Name()?.Length == 1 && e.Name()?[0] == ch);
-                            if (i < 0)
+                            var i = specs.FindIndex(e => e.Name() is string s && s.Length == 1 && s[0] == ch);
+                            if (i >= 0)
+                            {
+                                reader.Unread("-" + ch);
+                            }
+                            else
                             {
                                 if (mode == BindMode.Strict)
                                     throw new Exception("Invalid option: " + ch);
                                 tail.Add("-" + ch);
                             }
-                            else
-                            {
-                                e.Unread("-" + ch);
-                            }
                         }
+                        continue;
+                    }
+
+                    name = arg.Substring(1, 1);
+                }
+
+                if (name != null)
+                {
+                    var i = specs.FindIndex(e => e.Name() == name);
+                    if (i >= 0)
+                    {
+                        reader.Read();
+                        if (specs[i].IsFlag())
+                            reader.Unread("+");
+                        if (!accumulators[i].Read(reader))
+                            throw new Exception("Invalid value for option: " + name);
                     }
                     else
                     {
-                        var ch = arg[1];
-                        var i = infos.FindIndex(e => e.Name()?.Length == 1 && e.Name()?[0] == ch);
-                        if (i < 0)
-                        {
-                            if (mode == BindMode.Strict)
-                                throw new Exception("Invalid option: " + ch);
-                            e.Read();
-                            tail.Add(arg);
-                        }
-                        else
-                        {
-                            e.Read();
-                            if (infos[i].IsFlag())
-                                e.Unread("+");
-                            if (!values[i].Read(e))
-                                throw new Exception("Invalid value for option: " + ch);
-                        }
+                        if (mode == BindMode.Strict)
+                            throw new Exception("Invalid option: " + name);
+                        reader.Read();
+                        tail.Add(arg);
                     }
                 }
                 else
                 {
-                    var i = infos.FindIndex(asi, e => e.Name() == null);
-                    if (i < 0)
+                    var i = specs.FindIndex(asi, e => e.Name() == null);
+                    if (i >= 0)
                     {
-                        e.Read();
-                        tail.Add(arg);
+                        asi = i + 1;
+                        if (!accumulators[i].Read(reader))
+                            throw new Exception("Invalid argument: " + arg);
                     }
                     else
                     {
-                        asi = i + 1;
-                        if (!values[i].Read(e))
-                            throw new Exception("Invalid argument: " + arg);
+                        reader.Read();
+                        tail.Add(arg);
                     }
                 }
             }
 
-            return (binder.Bind(info => values[infos.IndexOf(info)]), tail.ToImmutableArray());
+            return (binder.Bind(info => accumulators[specs.IndexOf(info)]), tail.ToImmutableArray());
         }
 
         public static IArgBinder<T> Create<T>(Func<Func<IArg, IAccumulator>, T> binder, Func<IEnumerable<IArg>> inspector) =>
