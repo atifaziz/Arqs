@@ -31,6 +31,7 @@ namespace Largs
     public interface IArgTrait   {}
     public interface IFlagArg    : IArgTrait {}
     public interface IOptionArg  : IArgTrait {}
+    public interface IIntOptArg  : IArgTrait {}
     public interface IOperandArg : IArgTrait {}
     public interface ILiteralArg : IArgTrait {}
     public interface ITailArg    : IArgTrait {}
@@ -145,6 +146,7 @@ namespace Largs
     {
         static readonly IOptionArg OptionArg   = null;
         static readonly IFlagArg FlagArg       = null;
+        static readonly IIntOptArg IntOptArg   = null;
         static readonly IOperandArg OperandArg = null;
         static readonly ILiteralArg LiteralArg = null;
         static readonly IListArg ListArg       = null;
@@ -241,6 +243,18 @@ namespace Largs
         public static IArg<T, T, IOptionArg> Option<T>(string name, ShortOptionName shortName, IParser<T> parser) =>
             Option(name, shortName, default, parser);
 
+        public static IArg<int, int, IIntOptArg> IntOpt(string name) =>
+            IntOpt(name, -1);
+
+        public static IArg<int, int, IIntOptArg> IntOpt(string name, int @default) =>
+            IntOpt(name, @default, Parser.Int32());
+
+        public static IArg<T, T, IIntOptArg> IntOpt<T>(string name, IParser<T> parser) =>
+            IntOpt(name, default, parser);
+
+        public static IArg<T, T, IIntOptArg> IntOpt<T>(string name, T @default, IParser<T> parser) =>
+            Create(IntOptArg, parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default);
+
         public static IArg<T, T, IOperandArg> Operand<T>(string name, IParser<T> parser) =>
             Operand(name, default, parser);
 
@@ -313,6 +327,7 @@ namespace Largs
 
         public static bool IsFlag   (this IArg arg) => arg.Is<IFlagArg   >();
         public static bool IsOption (this IArg arg) => arg.Is<IOptionArg >();
+        public static bool IsIntOpt (this IArg arg) => arg.Is<IIntOptArg >();
         public static bool IsOperand(this IArg arg) => arg.Is<IOperandArg>();
         public static bool IsLiteral(this IArg arg) => arg.Is<ILiteralArg>();
         public static bool IsTail   (this IArg arg) => arg.Is<ITailArg   >();

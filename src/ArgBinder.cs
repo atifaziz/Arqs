@@ -19,6 +19,7 @@ namespace Largs
     using System;
     using System.Collections.Generic;
     using System.Collections.Immutable;
+    using System.Globalization;
     using System.Linq;
 
     public interface IArgBinder
@@ -81,6 +82,7 @@ namespace Largs
                 accumulators[i] = specs[i].CreateAccumulator();
 
             var asi = 0;
+            var nsi = 0;
             var tail = new List<string>();
 
             using var reader = args.Read();
@@ -93,6 +95,24 @@ namespace Largs
                 }
                 else if (arg.Length > 1 && arg[0] == '-')
                 {
+                    if (IsDigital(arg, 1, arg.Length))
+                    {
+                        var i = specs.FindIndex(nsi, e => e.IsIntOpt());
+                        if (i >= 0)
+                        {
+                            reader.Unread(reader.Read().Substring(1));
+                            if (!accumulators[i].Read(reader))
+                                throw new Exception("Invalid option: " + arg);
+                            nsi = i + 1;
+                        }
+                        else if (mode == BindMode.Tolerant)
+                        {
+                            tail.Add(reader.Read());
+                        }
+
+                        continue;
+                    }
+
                     if (arg.Length > 2)
                     {
                         reader.Read();
@@ -118,7 +138,7 @@ namespace Largs
 
                 if (name == default)
                 {
-                    var i = specs.FindIndex(asi, e => e.Name() == null && e.ShortName() == null);
+                    var i = specs.FindIndex(asi, e => e.Name() == null && e.ShortName() == null && !e.IsIntOpt());
                     if (i >= 0)
                     {
                         asi = i + 1;
@@ -165,6 +185,16 @@ namespace Largs
             }
 
             return (binder.Bind(info => accumulators[specs.IndexOf(info)]), tail.ToImmutableArray());
+
+            static bool IsDigital(string s, int start, int end)
+            {
+                for (var i = start; i < end; i++)
+                {
+                    if (s[i] < '0' || s[i] > '9')
+                        return false;
+                }
+                return true;
+            }
         }
 
         public static IArgBinder<T> Create<T>(Func<Func<IArg, IAccumulator>, T> binder, Func<IEnumerable<IArg>> inspector) =>

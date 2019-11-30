@@ -37,13 +37,14 @@ namespace Largs.Tests
                 join baz  in Arg.Option("baz", Parser.Int32().Nullable())  on 1 equals 1
                 join qux  in Arg.Option("qux", "?", Parser.String()) on 1 equals 1
                 join xs   in Arg.Option("x", Parser.String()).List() on 1 equals 1
+                join @int in Arg.IntOpt("int") on 1 equals 1
                 join pos1 in Arg.Operand("x", Parser.String()) on 1 equals 1
                 join pos2 in Arg.Operand("x", Parser.String()) on 1 equals 1
-                select new { Verbosity = vl, Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs), Pos1 = pos1, Pos2 = pos2 }
+                select new { Verbosity = vl, Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs), Int = @int, Pos1 = pos1, Pos2 = pos2 }
                 into e
                 select (3, e);
 
-            var commandLine = "1 --bar -v -v -v --foo 4 2 hello --foo 2 -x one -x two world -x three".Split();
+            var commandLine = "1 --bar -v -v -v --foo 4 2 hello --foo 2 -x one -42 -x two world -x three".Split();
 
             var (mode, result, tail) =
                 ArgBinder.Bind(help, version, args, commandLine);
@@ -56,6 +57,7 @@ namespace Largs.Tests
             Assert.That(result.Baz, Is.Null);
             Assert.That(result.Qux, Is.EqualTo("?"));
             Assert.That(result.X, Is.EqualTo("one,two,three"));
+            Assert.That(result.Int, Is.EqualTo(42));
             Assert.That(result.Pos1, Is.EqualTo("1"));
             Assert.That(result.Pos2, Is.EqualTo("2"));
             Assert.That(tail, Is.EqualTo(new[] { "hello", "world" }));
@@ -69,6 +71,7 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("qux"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("x"));
+            Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
 
