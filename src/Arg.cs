@@ -100,6 +100,7 @@ namespace Largs
         static class Symbols
         {
             public static readonly Symbol Name        = Symbol.New(nameof(Name));
+            public static readonly Symbol ShortName   = Symbol.New(nameof(ShortName));
             public static readonly Symbol Description = Symbol.New(nameof(Description));
         }
 
@@ -114,6 +115,18 @@ namespace Largs
 
         public static PropertySet WithName(this PropertySet properties, string value) =>
             properties.With(Symbols.Name, value);
+
+        public static ShortOptionName ShortName(this IArg arg) =>
+            arg.Properties.ShortName();
+
+        public static ShortOptionName ShortName(this PropertySet properties) =>
+            (ShortOptionName)properties[Symbols.ShortName];
+
+        public static T WithShortName<T>(this T arg, ShortOptionName value) where T : IArg =>
+            (T)arg.WithProperties(arg.Properties.WithShortName(value));
+
+        public static PropertySet WithShortName(this PropertySet properties, ShortOptionName value) =>
+            properties.With(Symbols.ShortName, value);
 
         public static string Description(this IArg arg) =>
             (string)arg.Properties[Symbols.Description];
@@ -147,23 +160,86 @@ namespace Largs
         public static readonly IParser<int> BinaryPlusMinusParser = from f in BooleanPlusMinusParser select f ? 1 : 0;
 
         public static IArg<bool, bool, IFlagArg> Flag(string name) =>
+            name switch
+            {
+                null => throw new ArgumentNullException(nameof(name)),
+                var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
+                var s when s.Length == 1 => Flag(ShortOptionName.From(s[0])),
+                _ => Flag(name, null)
+            };
+
+        public static IArg<bool, bool, IFlagArg> Flag(char shortName) =>
+            Flag(ShortOptionName.From(shortName));
+
+        public static IArg<bool, bool, IFlagArg> Flag(ShortOptionName shortName) =>
+            Flag(null, shortName);
+
+        public static IArg<bool, bool, IFlagArg> Flag(string name, ShortOptionName shortName) =>
             Create(FlagArg, BooleanPlusMinusParser,
                    () => Accumulator.Value(BooleanPlusMinusParser),
                    r => r.HasValue)
-                .WithName(name);
+                .WithName(name)
+                .WithShortName(shortName);
 
         public static IArg<int, int, IFlagArg> CountedFlag(string name) =>
+            name switch
+            {
+                null => throw new ArgumentNullException(nameof(name)),
+                var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
+                var s when s.Length == 1 => CountedFlag(ShortOptionName.From(s[0])),
+                _ => CountedFlag(name, null)
+            };
+
+        public static IArg<int, int, IFlagArg> CountedFlag(char shortName) =>
+            CountedFlag(ShortOptionName.From(shortName));
+
+        public static IArg<int, int, IFlagArg> CountedFlag(ShortOptionName shortName) =>
+            CountedFlag(null, shortName);
+
+        public static IArg<int, int, IFlagArg> CountedFlag(string name, ShortOptionName shortName) =>
             Create(FlagArg, BinaryPlusMinusParser,
                    () => Accumulator.Value(BinaryPlusMinusParser, 0, (acc, f) => acc + f),
                    r => r.Value)
-                .WithName(name);
+                .WithName(name)
+                .WithShortName(shortName);
 
         public static IArg<T, T, IOptionArg> Option<T>(string name, T @default, IParser<T> parser) =>
+            name switch
+            {
+                null => throw new ArgumentNullException(nameof(name)),
+                var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
+                var s when s.Length == 1 => Option(ShortOptionName.From(s[0]), @default, parser),
+                _ => Option(name, null, @default, parser)
+            };
+
+        public static IArg<T, T, IOptionArg> Option<T>(char shortName, T @default, IParser<T> parser) =>
+            Option(ShortOptionName.From(shortName), @default, parser);
+
+        public static IArg<T, T, IOptionArg> Option<T>(ShortOptionName shortName, T @default, IParser<T> parser) =>
+            Option(null, shortName, @default, parser);
+
+        public static IArg<T, T, IOptionArg> Option<T>(string name, ShortOptionName shortName, T @default, IParser<T> parser) =>
             Create(OptionArg, parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default)
-                .WithName(name);
+                .WithName(name)
+                .WithShortName(shortName);
 
         public static IArg<T, T, IOptionArg> Option<T>(string name, IParser<T> parser) =>
-            Option(name, default, parser);
+            name switch
+            {
+                null => throw new ArgumentNullException(nameof(name)),
+                var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
+                var s when s.Length == 1 => Option(ShortOptionName.From(s[0]), parser),
+                _ => Option(name, null, parser)
+            };
+
+        public static IArg<T, T, IOptionArg> Option<T>(char shortName, IParser<T> parser) =>
+            Option(ShortOptionName.From(shortName), parser);
+
+        public static IArg<T, T, IOptionArg> Option<T>(ShortOptionName shortName, IParser<T> parser) =>
+            Option(null, shortName, parser);
+
+        public static IArg<T, T, IOptionArg> Option<T>(string name, ShortOptionName shortName, IParser<T> parser) =>
+            Option(name, shortName, default, parser);
 
         public static IArg<T, T, IOperandArg> Operand<T>(string name, IParser<T> parser) =>
             Operand(name, default, parser);

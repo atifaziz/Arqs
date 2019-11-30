@@ -86,10 +86,10 @@ namespace Largs
             using var reader = args.Read();
             while (reader.TryPeek(out var arg))
             {
-                string name = null;
+                (string, ShortOptionName) name = default;
                 if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
-                    name = arg.Substring(2);
+                    name = (arg.Substring(2), null);
                 }
                 else if (arg.Length > 1 && arg[0] == '-')
                 {
@@ -98,7 +98,7 @@ namespace Largs
                         reader.Read();
                         foreach (var ch in arg.Substring(1).Reverse())
                         {
-                            var i = specs.FindIndex(e => e.Name() is string s && s.Length == 1 && s[0] == ch);
+                            var i = specs.FindIndex(e => e.ShortName() is ShortOptionName sn && sn == ch);
                             if (i >= 0)
                             {
                                 reader.Unread("-" + ch);
@@ -113,31 +113,12 @@ namespace Largs
                         continue;
                     }
 
-                    name = arg.Substring(1, 1);
+                    name = (null, ShortOptionName.From(arg[1]));
                 }
 
-                if (name != null)
+                if (name == default)
                 {
-                    var i = specs.FindIndex(e => e.Name() == name);
-                    if (i >= 0)
-                    {
-                        reader.Read();
-                        if (specs[i].IsFlag())
-                            reader.Unread("+");
-                        if (!accumulators[i].Read(reader))
-                            throw new Exception("Invalid value for option: " + name);
-                    }
-                    else
-                    {
-                        if (mode == BindMode.Strict)
-                            throw new Exception("Invalid option: " + name);
-                        reader.Read();
-                        tail.Add(arg);
-                    }
-                }
-                else
-                {
-                    var i = specs.FindIndex(asi, e => e.Name() == null);
+                    var i = specs.FindIndex(asi, e => e.Name() == null && e.ShortName() == null);
                     if (i >= 0)
                     {
                         asi = i + 1;
@@ -146,6 +127,37 @@ namespace Largs
                     }
                     else
                     {
+                        reader.Read();
+                        tail.Add(arg);
+                    }
+                }
+                else
+                {
+                    var i = specs.FindIndex(e => name switch
+                    {
+                        (string ln, null) => e.Name() == ln,
+                        (null, ShortOptionName sn) => e.ShortName() == sn,
+                        _ => false,
+                    });
+                    if (i >= 0)
+                    {
+                        reader.Read();
+                        if (specs[i].IsFlag())
+                            reader.Unread("+");
+                        if (!accumulators[i].Read(reader))
+                        {
+                            var (ln, sn) = name;
+                            throw new Exception("Invalid value for option: " + (ln ?? sn.ToString()));
+                        }
+                    }
+                    else
+                    {
+                        if (mode == BindMode.Strict)
+                        {
+                            var (ln, sn) = name;
+                            throw new Exception("Invalid option: " + (ln ?? sn.ToString()));
+                        }
+
                         reader.Read();
                         tail.Add(arg);
                     }

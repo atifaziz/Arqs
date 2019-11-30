@@ -61,14 +61,14 @@ namespace Largs.Tests
             Assert.That(tail, Is.EqualTo(new[] { "hello", "world" }));
 
             var infos = new Queue<IArg>(args.Inspect());
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("h"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("V"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("v"));
+            Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("h"));
+            Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("V"));
+            Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("v"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("foo"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("qux"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("x"));
+            Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("x"));
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
 
@@ -119,7 +119,7 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("qux"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("x"));
+            Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("x"));
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
@@ -170,10 +170,10 @@ namespace Largs.Tests
             Assert.That(tail, Is.Empty);
 
             var infos = new Queue<IArg>(args.Inspect());
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("a"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("b"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("c"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("d"));
+            Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("a"));
+            Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("b"));
+            Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("c"));
+            Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("d"));
         }
 
         [Test]
