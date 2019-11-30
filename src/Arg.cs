@@ -26,12 +26,6 @@ namespace Largs
         IArg WithProperties(PropertySet value);
         IParser Parser { get; }
         IAccumulator CreateAccumulator();
-        T Accept<T>(IArgVisitor<T> visitor);
-    }
-
-    public interface IArgVisitor<out R>
-    {
-        R Visit<T, V, A>(IArg<T, V, A> arg);
     }
 
     public interface IArgTrait   {}
@@ -49,7 +43,17 @@ namespace Largs
         new IAccumulator<T> CreateAccumulator();
     }
 
-    sealed class Arg<T, V, A> : IArg<T, V, A>
+    interface IArgVisitable
+    {
+        T Accept<T>(IArgVisitor<T> visitor);
+    }
+
+    interface IArgVisitor<out R>
+    {
+        R Visit<T, V, A>(IArg<T, V, A> arg);
+    }
+
+    sealed class Arg<T, V, A> : IArg<T, V, A>, IArgVisitable
     {
         readonly Func<IAccumulator<T>> _accumulatorFactory;
         readonly Func<IAccumulator<T>, T> _binder;
@@ -79,7 +83,7 @@ namespace Largs
 
         IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
 
-        R IArg.Accept<R>(IArgVisitor<R> visitor) => visitor.Visit(this);
+        R IArgVisitable.Accept<R>(IArgVisitor<R> visitor) => visitor.Visit(this);
 
         public IAccumulator<T> CreateAccumulator() => _accumulatorFactory();
 
@@ -239,7 +243,7 @@ namespace Largs
         public static bool IsList   (this IArg arg) => arg.Is<IListArg   >();
 
         static bool Is<T>(this IArg arg) where T : IArgTrait =>
-            arg.Accept(ArgTypeVisitor.Instance) is var (_, _, t) && t == typeof(T);
+            ((IArgVisitable)arg).Accept(ArgTypeVisitor.Instance) is var (_, _, t) && t == typeof(T);
 
         sealed class ArgTypeVisitor : IArgVisitor<(Type, Type, Type)>
         {
