@@ -3,32 +3,43 @@ namespace Largs.Sample
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Text;
 
     static class Program
     {
         static void Main(string[] args)
         {
+            var helpOption =
+                Arg.Flag("help").WithShortName(ShortOptionName.From('h'))/*.WithOtherName("?").Break()*/;
+
             var q =
-                from help in Arg.Flag("help").WithShortName(ShortOptionName.From('h'))/*.WithOtherName("?").Break()*/
-                from num in Arg.Option("num", ShortOptionName.From('n'), 123, Parser.Int32())
+                from _ in helpOption
+                join num in Arg.Option("num", ShortOptionName.From('n'), 123, Parser.Int32())
                     .WithDescription("an integer.")
                     .WithDescription("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
-                from str in Arg.Operand("string", "str", Parser.String()).WithDescription("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
-                from force in Arg.Flag("force")
+                    on 1 equals 1
+                join str in Arg.Operand("string", "str", Parser.String()).WithDescription("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
+                    on 1 equals 1
+                join force in Arg.Flag("force")
+                    on 1 equals 1
                 select new
                 {
-                    Help = help,
                     Num = num,
                     Force = force,
+                    Str = str,
                 };
 
-            var (options, tail) = q.Bind(args);
+            var (help, options, tail) =
+                ArgBinder.Bind(
+                    new[] { from h in helpOption select (h, true) },
+                    from a in q select (false, a),
+                    args);
 
             Console.WriteLine(options);
             Console.WriteLine(string.Join("; ", tail));
 
-            if (options.Help)
+            if (help)
                 Describe(q, Console.Out);
         }
 
@@ -49,16 +60,16 @@ namespace Largs.Sample
                     sb.Append('-').Append(sn);
                 else
                     sb.Append("    ");
-                if (arg.Name is string n)
+                if (arg.Name() is string n)
                 {
-                    if (arg.ShortName != null)
+                    if (arg.ShortName() != null)
                         sb.Append(", ");
                     sb.Append("--").Append(n);
                 }
-
+/*TODO
                 if (arg.OtherName is string on)
                     sb.Append(", --").Append(@on);
-
+*/
                 if (!arg.IsFlag())
                     sb.Append("=VALUE");
 
