@@ -97,7 +97,7 @@ namespace Largs
 
     public static partial class Arg
     {
-        public static class Symbols
+        static class Symbols
         {
             public static readonly Symbol Name        = Symbol.New(nameof(Name));
             public static readonly Symbol Description = Symbol.New(nameof(Description));
