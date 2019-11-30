@@ -10,13 +10,11 @@ namespace Largs.Sample
         static void Main(string[] args)
         {
             var q =
-                from help in Arg.Flag("help").WithShortName("h").WithOtherName("?").Break()
-                from num in Arg.Value("num", 123, Parser.Int32())
-                    .WithShortName("n")
-                    .WithOtherName("number-number-number")
+                from help in Arg.Flag("help").WithShortName(ShortOptionName.From('h'))/*.WithOtherName("?").Break()*/
+                from num in Arg.Option("num", ShortOptionName.From('n'), 123, Parser.Int32())
                     .WithDescription("an integer.")
                     .WithDescription("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
-                from str in Arg.Value("string", "str", Parser.String()).WithDescription("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
+                from str in Arg.Operand("string", "str", Parser.String()).WithDescription("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
                 from force in Arg.Flag("force")
                 select new
                 {
@@ -34,24 +32,20 @@ namespace Largs.Sample
                 Describe(q, Console.Out);
         }
 
-        static void Describe<T>(IArgBinder<T> binder, TextWriter writer)
-        {
-            var infos = new List<ArgInfo>();
-            binder.Inspect(infos);
-            Describe(infos, writer);
-        }
+        static void Describe<T>(IArgBinder<T> binder, TextWriter writer) =>
+            Describe(binder.Inspect(), writer);
 
-        static void Describe(IEnumerable<ArgInfo> args, TextWriter writer)
+        static void Describe(IEnumerable<IArg> args, TextWriter writer)
         {
             var sb = new StringBuilder();
             foreach (var arg in args)
                 Describe(arg);
 
-            void Describe(ArgInfo arg)
+            void Describe(IArg arg)
             {
                 sb.Clear();
                 sb.Append("  ");
-                if (arg.ShortName is string sn)
+                if (arg.ShortName() is ShortOptionName sn)
                     sb.Append('-').Append(sn);
                 else
                     sb.Append("    ");
@@ -65,12 +59,12 @@ namespace Largs.Sample
                 if (arg.OtherName is string on)
                     sb.Append(", --").Append(@on);
 
-                if (!arg.IsFlag)
+                if (!arg.IsFlag())
                     sb.Append("=VALUE");
 
                 var written = sb.Length;
 
-                if (arg.Description == null)
+                if (arg.Description() == null)
                 {
                     writer.WriteLine(sb);
                     return;
@@ -87,7 +81,7 @@ namespace Largs.Sample
 
                 var indent = false;
                 var prefix = new string(' ', OptionWidth + 2);
-                foreach (var line in GetLines(arg.Description))
+                foreach (var line in GetLines(arg.Description()))
                 {
                     if (indent)
                         sb.Append(prefix);
