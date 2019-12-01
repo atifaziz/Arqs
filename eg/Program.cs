@@ -11,11 +11,12 @@ namespace Largs.Sample
         static void Main(string[] args)
         {
             var helpOption =
-                Arg.Flag("help").WithShortName(ShortOptionName.From('h'))/*.WithOtherName("?").Break()*/;
+                Arg.Flag("help").WithShortName('h')/*.WithOtherName("?").Break()*/;
 
             var q =
                 from _ in helpOption
-                join num in Arg.Option("num", ShortOptionName.From('n'), 123, Parser.Int32())
+                join num in Arg.Option("num", 123, Parser.Int32())
+                    .WithShortName('n')
                     .WithDescription("an integer.")
                     .WithDescription("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
                     on 1 equals 1
