@@ -88,10 +88,10 @@ namespace Largs
 
         public IAccumulator<T> CreateAccumulator() => _accumulatorFactory();
 
-        object IArgBinder.Bind(Func<IArg, IAccumulator> source) => Bind(source);
+        object IArgBinder.Bind(Reader<IAccumulator> source) => Bind(source);
 
-        public T Bind(Func<IArg, IAccumulator> source) =>
-            _binder((IAccumulator<T>)source(this));
+        public T Bind(Reader<IAccumulator> source) =>
+            _binder((IAccumulator<T>)source.Read());
 
         public IEnumerable<IArg> Inspect() { yield return this; }
     }
@@ -294,7 +294,7 @@ namespace Largs
                    from v in arg.Parser select (present, v),
                    () => from v in arg.CreateAccumulator()
                          select (Presence: present, Value: v),
-                   r => r.HasValue ? (present, arg.Bind(_ => Accumulator.Return(r.Value.Item2))) : (absent, default))
+                   r => r.HasValue ? (present, arg.Bind(new IAccumulator[] { Accumulator.Return(r.Value.Item2) }.Read())) : (absent, default))
                 .WithProperties(arg.Properties);
 
         static IArg<ImmutableArray<T>, T, IListArg> List<T, A>(IArg<T, T, A> arg) =>
@@ -306,7 +306,7 @@ namespace Largs
                        var accumulator = arg.CreateAccumulator();
                        if (!accumulator.Read(args))
                            return default;
-                       array.Add(arg.Bind(_ => accumulator));
+                       array.Add(arg.Bind(new IAccumulator[] { accumulator }.Read()));
                        return ParseResult.Success(array.ToImmutable());
                    }),
                    r => r.Value)
@@ -321,10 +321,10 @@ namespace Largs
                        var array = seed.ToBuilder();
                        while (args.HasMore())
                        {
-                           var reader = arg.CreateAccumulator();
-                           if (!reader.Read(args))
+                           var accumulator = arg.CreateAccumulator();
+                           if (!accumulator.Read(args))
                                return default;
-                           array.Add(arg.Bind(_ => reader));
+                           array.Add(arg.Bind(new IAccumulator[] { accumulator }.Read()));
                        }
                        return ParseResult.Success(array.ToImmutable());
                    }),
