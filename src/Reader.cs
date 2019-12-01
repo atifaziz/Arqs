@@ -17,6 +17,7 @@
 namespace Largs
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
 
     public static class Reader
@@ -31,11 +32,10 @@ namespace Largs
         Stack<T> _nextItems;
         IEnumerator<T> _enumerator;
 
-        public Reader(IEnumerable<T> items)
-        {
-            if (items == null) throw new ArgumentNullException(nameof(items));
-            _enumerator = items.GetEnumerator();
-        }
+        public Reader(IEnumerable<T> items) :
+            this((items ?? throw new ArgumentNullException(nameof(items))).GetEnumerator()) {}
+
+        Reader(IEnumerator<T> enumerator) => _enumerator = enumerator;
 
         public int Index { get; private set; }
 
@@ -117,6 +117,17 @@ namespace Largs
 
             Index++;
             return true;
+        }
+
+        public static readonly Reader<T> Empty = new Reader<T>(new EmptyEnumerator());
+
+        sealed class EmptyEnumerator : IEnumerator<T>
+        {
+            public bool MoveNext() => false;
+            public void Reset() {}
+            public T Current => throw new InvalidOperationException();
+            object IEnumerator.Current => Current;
+            public void Dispose() {}
         }
     }
 }
