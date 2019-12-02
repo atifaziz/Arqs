@@ -29,7 +29,6 @@ namespace Largs
     }
 
     public interface IArgTrait   {}
-    public interface IFlagArg    : IArgTrait {}
     public interface IOptionArg  : IArgTrait {}
     public interface IIntOptArg  : IArgTrait {}
     public interface IOperandArg : IArgTrait {}
@@ -103,7 +102,20 @@ namespace Largs
             public static readonly Symbol Name        = Symbol.New(nameof(Name));
             public static readonly Symbol ShortName   = Symbol.New(nameof(ShortName));
             public static readonly Symbol Description = Symbol.New(nameof(Description));
+            public static readonly Symbol IsFlag      = Symbol.New(nameof(IsFlag));
         }
+
+        public static bool IsFlag(this IArg arg) =>
+            arg.Properties.IsFlag();
+
+        public static bool IsFlag(this PropertySet properties) =>
+            (bool?)properties[Symbols.IsFlag] ?? false;
+
+        public static T WithIsFlag<T>(this T arg, bool value) where T : IArg =>
+            (T)arg.WithProperties(arg.Properties.WithIsFlag(value));
+
+        public static PropertySet WithIsFlag(this PropertySet properties, bool value) =>
+            properties.Set(Symbols.IsFlag, value);
 
         public static string Name(this IArg arg) =>
             arg.Properties.Name();
@@ -151,7 +163,6 @@ namespace Largs
     public partial class Arg
     {
         static readonly IOptionArg OptionArg   = null;
-        static readonly IFlagArg FlagArg       = null;
         static readonly IIntOptArg IntOptArg   = null;
         static readonly IOperandArg OperandArg = null;
         static readonly ILiteralArg LiteralArg = null;
@@ -167,7 +178,7 @@ namespace Largs
         public static readonly IParser<bool> BooleanPlusMinusParser = Parser.Boolean("+", "-");
         public static readonly IParser<int> BinaryPlusMinusParser = from f in BooleanPlusMinusParser select f ? 1 : 0;
 
-        public static IArg<bool, bool, IFlagArg> Flag(string name) =>
+        public static IArg<bool, bool, IOptionArg> Flag(string name) =>
             name switch
             {
                 null => throw new ArgumentNullException(nameof(name)),
@@ -176,20 +187,22 @@ namespace Largs
                 _ => Flag(name, null)
             };
 
-        public static IArg<bool, bool, IFlagArg> Flag(char shortName) =>
+        public static IArg<bool, bool, IOptionArg> Flag(char shortName) =>
             Flag(ShortOptionName.From(shortName));
 
-        public static IArg<bool, bool, IFlagArg> Flag(ShortOptionName shortName) =>
+        public static IArg<bool, bool, IOptionArg> Flag(ShortOptionName shortName) =>
             Flag(null, shortName);
 
-        public static IArg<bool, bool, IFlagArg> Flag(string name, ShortOptionName shortName) =>
-            Create(FlagArg, BooleanPlusMinusParser,
+        public static IArg<bool, bool, IOptionArg> Flag(string name, ShortOptionName shortName) =>
+            Create(OptionArg, BooleanPlusMinusParser,
                    () => Accumulator.Value(BooleanPlusMinusParser),
                    r => r.Count > 0)
                 .WithName(name)
-                .WithShortName(shortName);
+                .WithShortName(shortName)
+                .WithIsFlag(true);
 
-        public static IArg<int, int, IFlagArg> CountedFlag(string name) =>
+
+        public static IArg<int, int, IOptionArg> CountedFlag(string name) =>
             name switch
             {
                 null => throw new ArgumentNullException(nameof(name)),
@@ -198,18 +211,19 @@ namespace Largs
                 _ => CountedFlag(name, null)
             };
 
-        public static IArg<int, int, IFlagArg> CountedFlag(char shortName) =>
+        public static IArg<int, int, IOptionArg> CountedFlag(char shortName) =>
             CountedFlag(ShortOptionName.From(shortName));
 
-        public static IArg<int, int, IFlagArg> CountedFlag(ShortOptionName shortName) =>
+        public static IArg<int, int, IOptionArg> CountedFlag(ShortOptionName shortName) =>
             CountedFlag(null, shortName);
 
-        public static IArg<int, int, IFlagArg> CountedFlag(string name, ShortOptionName shortName) =>
-            Create(FlagArg, BinaryPlusMinusParser,
+        public static IArg<int, int, IOptionArg> CountedFlag(string name, ShortOptionName shortName) =>
+            Create(OptionArg, BinaryPlusMinusParser,
                    () => Accumulator.Value(BinaryPlusMinusParser, 0, (acc, f) => acc + f),
                    r => r.GetResult())
                 .WithName(name)
-                .WithShortName(shortName);
+                .WithShortName(shortName)
+                .WithIsFlag(true);
 
         public static IArg<T, T, IOptionArg> Option<T>(string name, T @default, IParser<T> parser) =>
             name switch
@@ -282,9 +296,6 @@ namespace Largs
         public static IArg<ImmutableArray<T>, T, IListArg> List<T>(this IArg<T, T, IOptionArg> arg) =>
             List<T, IOptionArg>(arg);
 
-        public static IArg<ImmutableArray<T>, T, IListArg> List<T>(this IArg<T, T, IFlagArg> arg) =>
-            List<T, IFlagArg>(arg);
-
         public static IArg<(bool Present, T Value), (bool Present, T Value), A>
             FlagPresence<T, A>(this IArg<T, T, A> arg) => arg.FlagPresence(false, true);
 
@@ -336,7 +347,6 @@ namespace Largs
                    r => r.GetResult())
                 .WithProperties(arg.Properties);
 
-        public static bool IsFlag   (this IArg arg) => arg.Is<IFlagArg   >();
         public static bool IsOption (this IArg arg) => arg.Is<IOptionArg >();
         public static bool IsIntOpt (this IArg arg) => arg.Is<IIntOptArg >();
         public static bool IsOperand(this IArg arg) => arg.Is<IOperandArg>();
