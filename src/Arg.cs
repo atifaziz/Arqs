@@ -185,7 +185,7 @@ namespace Largs
         public static IArg<bool, bool, IFlagArg> Flag(string name, ShortOptionName shortName) =>
             Create(FlagArg, BooleanPlusMinusParser,
                    () => Accumulator.Value(BooleanPlusMinusParser),
-                   r => r.HasValue)
+                   r => r.Count > 0)
                 .WithName(name)
                 .WithShortName(shortName);
 
@@ -207,7 +207,7 @@ namespace Largs
         public static IArg<int, int, IFlagArg> CountedFlag(string name, ShortOptionName shortName) =>
             Create(FlagArg, BinaryPlusMinusParser,
                    () => Accumulator.Value(BinaryPlusMinusParser, 0, (acc, f) => acc + f),
-                   r => r.Value)
+                   r => r.GetResult())
                 .WithName(name)
                 .WithShortName(shortName);
 
@@ -227,7 +227,7 @@ namespace Largs
             Option(null, shortName, @default, parser);
 
         public static IArg<T, T, IOptionArg> Option<T>(string name, ShortOptionName shortName, T @default, IParser<T> parser) =>
-            Create(OptionArg, parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default)
+            Create(OptionArg, parser, () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default)
                 .WithName(name)
                 .WithShortName(shortName);
 
@@ -259,13 +259,13 @@ namespace Largs
             IntOpt(name, default, parser);
 
         public static IArg<T, T, IIntOptArg> IntOpt<T>(string name, T @default, IParser<T> parser) =>
-            Create(IntOptArg, parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default);
+            Create(IntOptArg, parser, () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default);
 
         public static IArg<T, T, IOperandArg> Operand<T>(string name, IParser<T> parser) =>
             Operand(name, default, parser);
 
         public static IArg<T, T, IOperandArg> Operand<T>(string name, T @default, IParser<T> parser) =>
-            Create(OperandArg, parser, () => Accumulator.Value(parser), r => r.HasValue ? r.Value : @default);
+            Create(OperandArg, parser, () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default);
 
         public static IArg<string, string, ILiteralArg> Literal(string value) =>
             Literal(value, StringComparison.Ordinal);
@@ -273,7 +273,7 @@ namespace Largs
         public static IArg<string, string, ILiteralArg> Literal(string value, StringComparison comparison)
         {
             var parser = Parser.Literal(value, comparison);
-            return Create(LiteralArg, parser, () => Accumulator.Value(parser), r => r.Value);
+            return Create(LiteralArg, parser, () => Accumulator.Value(parser), r => r.GetResult());
         }
 
         public static IArg<ImmutableArray<T>, T, IListArg> List<T>(this IArg<T, T, IOperandArg> arg) =>
@@ -294,41 +294,46 @@ namespace Largs
                    from v in arg.Parser select (present, v),
                    () => from v in arg.CreateAccumulator()
                          select (Presence: present, Value: v),
-                   r => r.HasValue ? (present, arg.Bind(() => Accumulator.Return(r.Value.Item2))) : (absent, default))
+                   r => r.Count > 0 ? (present, arg.Bind(() => Accumulator.Return(r.GetResult().Item2))) : (absent, default))
                 .WithProperties(arg.Properties);
 
         static IArg<ImmutableArray<T>, T, IListArg> List<T, A>(IArg<T, T, A> arg) =>
             Create(ListArg,
                    arg.Parser,
-                   () => Accumulator.Create(ImmutableArray<T>.Empty, (seed, args) =>
-                   {
-                       var array = seed.ToBuilder();
-                       var accumulator = arg.CreateAccumulator();
-                       if (!accumulator.Read(args))
-                           return default;
-                       array.Add(arg.Bind(() => accumulator));
-                       return ParseResult.Success(array.ToImmutable());
-                   }),
-                   r => r.Value)
+                   () =>
+                       Accumulator.Create(ImmutableArray.CreateBuilder<T>(),
+                           (array, args) =>
+                           {
+                               var accumulator = arg.CreateAccumulator();
+                               if (!accumulator.Read(args))
+                                   return default;
+                               array.Add(arg.Bind(() => accumulator));
+                               return ParseResult.Success(array);
+                           },
+                           a => a.ToImmutable()),
+                       r => r.GetResult())
                 .WithProperties(arg.Properties);
 
         public static IArg<ImmutableArray<T>, T, ITailArg> Tail<T, A>(this IArg<T, T, A> arg)
             where A : IOperandArg =>
             Create(TailArg,
                    arg.Parser,
-                   () => Accumulator.Create(ImmutableArray<T>.Empty, (seed, args) =>
-                   {
-                       var array = seed.ToBuilder();
-                       while (args.HasMore())
-                       {
-                           var accumulator = arg.CreateAccumulator();
-                           if (!accumulator.Read(args))
-                               return default;
-                           array.Add(arg.Bind(() => accumulator));
-                       }
-                       return ParseResult.Success(array.ToImmutable());
-                   }),
-                   r => r.Value)
+                   () =>
+                       Accumulator.Create(ImmutableArray<T>.Empty,
+                           (seed, args) =>
+                           {
+                               var array = seed.ToBuilder();
+                               while (args.HasMore())
+                               {
+                                   var accumulator = arg.CreateAccumulator();
+                                   if (!accumulator.Read(args))
+                                       return default;
+                                   array.Add(arg.Bind(() => accumulator));
+                               }
+                               return ParseResult.Success(array.ToImmutable());
+                           },
+                           r => r),
+                   r => r.GetResult())
                 .WithProperties(arg.Properties);
 
         public static bool IsFlag   (this IArg arg) => arg.Is<IFlagArg   >();

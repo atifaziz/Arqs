@@ -20,63 +20,77 @@ namespace Largs
 
     public interface IAccumulator
     {
-        bool HasValue { get; }
-        object Value { get; }
+        int Count { get; }
+        object GetResult();
         bool Read(Reader<string> arg);
     }
 
     public interface IAccumulator<out T> : IAccumulator
     {
-        new T Value { get; }
+        new T GetResult();
     }
 
     public static class Accumulator
     {
         public static IAccumulator<T> Value<T>(IParser<T> parser) =>
-            Create<T>(default, (_, arg) => arg.TryRead(out var v) ? parser.Parse(v) : default);
+            Value(parser, default, (_, v) => v);
 
         public static IAccumulator<T> Value<T>(IParser<T> parser, T seed, Func<T, T, T> folder) =>
             Create(seed, (acc, arg) => arg.TryRead(out var s) && parser.Parse(s) is (true, var v)
-                                     ? ParseResult.Success(folder(acc, v)) : default);
+                                     ? ParseResult.Success(folder(acc, v)) : default,
+                         v => v);
 
         public static IAccumulator<T> Return<T>(T value) =>
-            new DelegatingAccumulator<T>(true, value, (v, arg) => ParseResult.Success(v));
+            new DelegatingAccumulator<T, T>(true, value, (v, arg) => ParseResult.Success(v), r => r);
 
-        public static IAccumulator<T> Create<T>(T seed, Func<T, Reader<string>, ParseResult<T>> reader) =>
-            new DelegatingAccumulator<T>(seed, reader);
+        public static IAccumulator<R> Create<T, R>(T seed, Func<T, Reader<string>, ParseResult<T>> reader, Func<T, R> resultSelector) =>
+            new DelegatingAccumulator<T, R>(seed, reader, resultSelector);
 
         public static IAccumulator<U> Select<T, U>(this IAccumulator<T> accumulator, Func<T, U> f) =>
-            Create<U>(default, (_, arg) => !accumulator.Read(arg) ? default : ParseResult.Success(f(accumulator.Value)));
+            Create(0, (count, arg) => accumulator.Read(arg) ? ParseResult.Success(count + 1) : default,
+                   r => f(accumulator.GetResult()));
 
-        sealed class DelegatingAccumulator<T> : IAccumulator<T>
+        sealed class DelegatingAccumulator<S, R> : IAccumulator<R>
         {
-            public bool HasValue { get; private set; }
-            public T Value { get; private set; }
+            readonly Func<S, Reader<string>, ParseResult<S>> _reader;
+            readonly Func<S, R> _resultSelector;
+            S _state;
+            bool _errored;
 
-            object IAccumulator.Value => Value;
+            public DelegatingAccumulator(S seed, Func<S, Reader<string>, ParseResult<S>> reader,
+                                         Func<S, R> resultSelector) :
+                this(false, seed, reader, resultSelector) {}
 
-            readonly Func<T, Reader<string>, ParseResult<T>> _reader;
-
-            public DelegatingAccumulator(T seed, Func<T, Reader<string>, ParseResult<T>> reader) :
-                this(false, seed, reader) {}
-
-            public DelegatingAccumulator(bool initialized, T seed, Func<T, Reader<string>, ParseResult<T>> reader)
+            public DelegatingAccumulator(bool initialized, S seed, Func<S, Reader<string>, ParseResult<S>> reader,
+                                         Func<S, R> resultSelector)
             {
-                HasValue = initialized;
-                Value = seed;
+                Count = initialized ? 1 : 0;
+                _state = seed;
                 _reader = reader ?? throw new ArgumentNullException(nameof(reader));
+                _resultSelector = resultSelector;
             }
+
+            public int Count { get; private set; }
+
+            public R GetResult() => !_errored && Count > 0 ? _resultSelector(_state)
+                                                           : throw new InvalidOperationException();
+
+            object IAccumulator.GetResult() => GetResult();
 
             public bool Read(Reader<string> arg)
             {
-                switch (_reader(Value, arg))
+                if (_errored)
+                    throw new InvalidOperationException();
+
+                switch (_reader(_state, arg))
                 {
                     case (true, var value):
-                        HasValue = true;
-                        Value = value;
+                        Count++;
+                        _state = value;
                         return true;
                     default:
-                        Value = default;
+                        _errored = true;
+                        _state = default;
                         return false;
                 }
             }
