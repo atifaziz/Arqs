@@ -88,10 +88,10 @@ namespace Largs
 
         public IAccumulator<T> CreateAccumulator() => _accumulatorFactory();
 
-        object IArgBinder.Bind(Reader<IAccumulator> source) => Bind(source);
+        object IArgBinder.Bind(Func<IAccumulator> source) => Bind(source);
 
-        public T Bind(Reader<IAccumulator> source) =>
-            _binder((IAccumulator<T>)source.Read());
+        public T Bind(Func<IAccumulator> source) =>
+            _binder((IAccumulator<T>)source());
 
         public IEnumerable<IArg> Inspect() { yield return this; }
     }
@@ -294,7 +294,7 @@ namespace Largs
                    from v in arg.Parser select (present, v),
                    () => from v in arg.CreateAccumulator()
                          select (Presence: present, Value: v),
-                   r => r.HasValue ? (present, arg.Bind(new IAccumulator[] { Accumulator.Return(r.Value.Item2) }.Read())) : (absent, default))
+                   r => r.HasValue ? (present, arg.Bind(() => Accumulator.Return(r.Value.Item2))) : (absent, default))
                 .WithProperties(arg.Properties);
 
         static IArg<ImmutableArray<T>, T, IListArg> List<T, A>(IArg<T, T, A> arg) =>
@@ -306,7 +306,7 @@ namespace Largs
                        var accumulator = arg.CreateAccumulator();
                        if (!accumulator.Read(args))
                            return default;
-                       array.Add(arg.Bind(new IAccumulator[] { accumulator }.Read()));
+                       array.Add(arg.Bind(() => accumulator));
                        return ParseResult.Success(array.ToImmutable());
                    }),
                    r => r.Value)
@@ -324,7 +324,7 @@ namespace Largs
                            var accumulator = arg.CreateAccumulator();
                            if (!accumulator.Read(args))
                                return default;
-                           array.Add(arg.Bind(new IAccumulator[] { accumulator }.Read()));
+                           array.Add(arg.Bind(() => accumulator));
                        }
                        return ParseResult.Success(array.ToImmutable());
                    }),

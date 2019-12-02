@@ -24,13 +24,13 @@ namespace Largs
 
     public interface IArgBinder
     {
-        object Bind(Reader<IAccumulator> source);
+        object Bind(Func<IAccumulator> source);
         IEnumerable<IArg> Inspect();
     }
 
     public interface IArgBinder<out T> : IArgBinder
     {
-        new T Bind(Reader<IAccumulator> source);
+        new T Bind(Func<IAccumulator> source);
     }
 
     public static class ArgBinder
@@ -184,7 +184,8 @@ namespace Largs
                 }
             }
 
-            return (binder.Bind(accumulators.Read()), tail.ToImmutableArray());
+            var ar = accumulators.Read();
+            return (binder.Bind(() => ar.Read()), tail.ToImmutableArray());
 
             static bool IsDigital(string s, int start, int end)
             {
@@ -197,7 +198,7 @@ namespace Largs
             }
         }
 
-        public static IArgBinder<T> Create<T>(Func<Reader<IAccumulator>, T> binder, Func<IEnumerable<IArg>> inspector) =>
+        public static IArgBinder<T> Create<T>(Func<Func<IAccumulator>, T> binder, Func<IEnumerable<IArg>> inspector) =>
             new DelegatingArgBinder<T>(binder, inspector);
 
         public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
@@ -205,7 +206,7 @@ namespace Largs
 
         public static IArgBinder<U> SelectMany<T, U>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f) =>
             Create(bindings => f(binder.Bind(bindings)).Bind(bindings),
-                   () => binder.Inspect().Concat(f(binder.Bind(Reader<IAccumulator>.Empty)).Inspect()));
+                   () => binder.Inspect().Concat(f(binder.Bind(null)).Inspect()));
 
         public static IArgBinder<V> SelectMany<T, U, V>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f, Func<T, U, V> g) =>
             binder.Select(t => f(t).Select(u => g(t, u))).SelectMany(pv => pv);
@@ -218,20 +219,20 @@ namespace Largs
 
         sealed class DelegatingArgBinder<T> : IArgBinder<T>
         {
-            readonly Func<Reader<IAccumulator>, T> _binder;
+            readonly Func<Func<IAccumulator>, T> _binder;
             readonly Func<IEnumerable<IArg>> _inspector;
 
-            public DelegatingArgBinder(Func<Reader<IAccumulator>, T> binder,
+            public DelegatingArgBinder(Func<Func<IAccumulator>, T> binder,
                                        Func<IEnumerable<IArg>> inspector)
             {
                 _binder = binder;
                 _inspector = inspector;
             }
 
-            object IArgBinder.Bind(Reader<IAccumulator> source) =>
+            object IArgBinder.Bind(Func<IAccumulator> source) =>
                 Bind(source);
 
-            public T Bind(Reader<IAccumulator> source) =>
+            public T Bind(Func<IAccumulator> source) =>
                 _binder(source);
 
             public IEnumerable<IArg> Inspect() =>
