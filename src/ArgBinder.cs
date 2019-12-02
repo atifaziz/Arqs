@@ -205,10 +205,19 @@ namespace Largs
 
         public static IArgBinder<U> SelectMany<T, U>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f) =>
             Create(bindings => f(binder.Bind(bindings)).Bind(bindings),
-                   () => binder.Inspect().Concat(f(binder.Bind(null)).Inspect()));
+                   () => binder.Inspect().Concat(f(default).Inspect()));
 
         public static IArgBinder<V> SelectMany<T, U, V>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f, Func<T, U, V> g) =>
-            binder.Select(t => f(t).Select(u => g(t, u))).SelectMany(pv => pv);
+            Create(bindings =>
+                {
+                    var a = binder.Bind(bindings);
+                    return g(a, f(a).Bind(bindings));
+                },
+                () =>
+                {
+                    var a = binder.Inspect();
+                    return a.Concat(f(default).Inspect());
+                });
 
         public static IArgBinder<V> Join<T, U, K, V>(this IArgBinder<T> first, IArgBinder<U> second,
             Func<T, K> unused1, Func<T, K> unused2,
