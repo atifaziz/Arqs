@@ -34,7 +34,6 @@ namespace Largs
     public interface IOperandArg : IArgTrait {}
     public interface ILiteralArg : IArgTrait {}
     public interface ITailArg    : IArgTrait {}
-    public interface IListArg    : IArgTrait {}
 
     public interface IArg<out T, V, A> : IArg, IArgBinder<T>
     {
@@ -103,6 +102,7 @@ namespace Largs
             public static readonly Symbol ShortName   = Symbol.New(nameof(ShortName));
             public static readonly Symbol Description = Symbol.New(nameof(Description));
             public static readonly Symbol IsFlag      = Symbol.New(nameof(IsFlag));
+            public static readonly Symbol IsList      = Symbol.New(nameof(IsList));
         }
 
         public static bool IsFlag(this IArg arg) =>
@@ -116,6 +116,18 @@ namespace Largs
 
         public static PropertySet WithIsFlag(this PropertySet properties, bool value) =>
             properties.Set(Symbols.IsFlag, value);
+
+        public static bool IsList(this IArg arg) =>
+            arg.Properties.IsList();
+
+        public static bool IsList(this PropertySet properties) =>
+            (bool?)properties[Symbols.IsList] ?? false;
+
+        public static T WithIsList<T>(this T arg, bool value) where T : IArg =>
+            (T)arg.WithProperties(arg.Properties.WithIsList(value));
+
+        public static PropertySet WithIsList(this PropertySet properties, bool value) =>
+            properties.Set(Symbols.IsList, value);
 
         public static string Name(this IArg arg) =>
             arg.Properties.Name();
@@ -166,7 +178,6 @@ namespace Largs
         static readonly IIntOptArg IntOptArg   = null;
         static readonly IOperandArg OperandArg = null;
         static readonly ILiteralArg LiteralArg = null;
-        static readonly IListArg ListArg       = null;
         static readonly ITailArg TailArg       = null;
 
         static IArg<T, V, A>
@@ -290,10 +301,10 @@ namespace Largs
             return Create(LiteralArg, parser, () => Accumulator.Value(parser), r => r.GetResult());
         }
 
-        public static IArg<ImmutableArray<T>, T, IListArg> List<T>(this IArg<T, T, IOperandArg> arg) =>
+        public static IArg<ImmutableArray<T>, T, IOperandArg> List<T>(this IArg<T, T, IOperandArg> arg) =>
             List<T, IOperandArg>(arg);
 
-        public static IArg<ImmutableArray<T>, T, IListArg> List<T>(this IArg<T, T, IOptionArg> arg) =>
+        public static IArg<ImmutableArray<T>, T, IOptionArg> List<T>(this IArg<T, T, IOptionArg> arg) =>
             List<T, IOptionArg>(arg);
 
         public static IArg<(bool Present, T Value), (bool Present, T Value), A>
@@ -308,8 +319,8 @@ namespace Largs
                    r => r.Count > 0 ? (present, arg.Bind(() => Accumulator.Return(r.GetResult().Item2))) : (absent, default))
                 .WithProperties(arg.Properties);
 
-        static IArg<ImmutableArray<T>, T, IListArg> List<T, A>(IArg<T, T, A> arg) =>
-            Create(ListArg,
+        static IArg<ImmutableArray<T>, T, A> List<T, A>(IArg<T, T, A> arg) =>
+            Create(default(A),
                    arg.Parser,
                    () =>
                        Accumulator.Create(ImmutableArray.CreateBuilder<T>(),
@@ -323,7 +334,7 @@ namespace Largs
                            },
                            a => a.ToImmutable()),
                        r => r.GetResult())
-                .WithProperties(arg.Properties);
+                .WithProperties(arg.Properties.Set(Symbols.IsList, true));
 
         public static IArg<ImmutableArray<T>, T, ITailArg> Tail<T, A>(this IArg<T, T, A> arg)
             where A : IOperandArg =>
@@ -352,7 +363,6 @@ namespace Largs
         public static bool IsOperand(this IArg arg) => arg.Is<IOperandArg>();
         public static bool IsLiteral(this IArg arg) => arg.Is<ILiteralArg>();
         public static bool IsTail   (this IArg arg) => arg.Is<ITailArg   >();
-        public static bool IsList   (this IArg arg) => arg.Is<IListArg   >();
 
         static bool Is<T>(this IArg arg) where T : IArgTrait =>
             ((IArgVisitable)arg).Accept(ArgTypeVisitor.Instance) is var (_, _, t) && t == typeof(T);
