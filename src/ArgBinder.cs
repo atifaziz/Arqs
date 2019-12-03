@@ -96,7 +96,7 @@ namespace Largs
                 {
                     if (IsDigital(arg, 1, arg.Length))
                     {
-                        var i = specs.FindIndex(nsi, e => e.IsIntOpt());
+                        var i = specs.FindIndex(nsi, e => e.IsIntegerOption());
                         if (i >= 0)
                         {
                             reader.Unread(reader.Read().Substring(1));
@@ -137,7 +137,7 @@ namespace Largs
 
                 if (name == default)
                 {
-                    var i = specs.FindIndex(asi, e => e.Name() == null && e.ShortName() == null && !e.IsIntOpt());
+                    var i = specs.FindIndex(asi, e => e.Name() == null && e.ShortName() == null && !e.IsIntegerOption());
                     if (i >= 0)
                     {
                         asi = i + 1;
