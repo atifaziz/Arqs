@@ -28,6 +28,101 @@ namespace Largs
         IAccumulator CreateAccumulator();
     }
 
+    public class OptionData
+    {
+        public OptionData(string description) =>
+            Description = description;
+
+        public string Description { get; }
+
+        public OptionData WithDescription(string value) =>
+            Update(value);
+
+        protected virtual OptionData Update(string description) =>
+            new OptionData(description);
+    }
+
+    public class ValueOptionData : OptionData
+    {
+        public ValueOptionData(string valueName, string description) : base(description)
+        {
+            ValueName = valueName;
+        }
+
+        public string ValueName { get; }
+
+        public ValueOptionData WithValueName(string value) =>
+            Update(value, Description);
+
+        protected override OptionData Update(string description) =>
+            Update(ValueName, description);
+
+        protected virtual ValueOptionData Update(string valueName, string description) =>
+            new ValueOptionData(valueName, description);
+    }
+
+    public class NamedOptionData : ValueOptionData
+    {
+        public NamedOptionData(string name, ShortOptionName shortName, string valueName, string description) :
+            base(valueName, description)
+        {
+            Name = name;
+            ShortName = shortName;
+        }
+
+        public string Name { get; }
+        public ShortOptionName ShortName { get; }
+
+        public NamedValueOptionData WithName(string value) =>
+            Update(value, ShortName, ValueName, Description);
+
+        public NamedValueOptionData WithShortName(ShortOptionName value) =>
+            Update(Name, value, ValueName, Description);
+
+        public NamedValueOptionData WithValueName(string value) =>
+            Update(value, ShortName, value, Description);
+
+        public NamedValueOptionData WithDescription(string value) =>
+            Update(Name, ShortName, ValueName, value);
+
+        protected override OptionData Update(string description) =>
+            Update(Name, ShortName, ValueName, description);
+
+        protected virtual NamedValueOptionData Update(string name, ShortOptionName shortName, string valueName, string description) =>
+            new NamedValueOptionData(name, shortName, valueName, description);
+    }
+
+    public class NamedValueOptionData : ValueOptionData
+    {
+        public NamedValueOptionData(string name, ShortOptionName shortName, string valueName, string description) :
+            base(valueName, description)
+        {
+            Name = name;
+            ShortName = shortName;
+        }
+
+        public string Name { get; }
+        public ShortOptionName ShortName { get; }
+
+        public NamedValueOptionData WithName(string value) =>
+            Update(value, ShortName, ValueName, Description);
+
+        public NamedValueOptionData WithShortName(ShortOptionName value) =>
+            Update(Name, value, ValueName, Description);
+
+        public NamedValueOptionData WithValueName(string value) =>
+            Update(value, ShortName, value, Description);
+
+        public NamedValueOptionData WithDescription(string value) =>
+            Update(Name, ShortName, ValueName, value);
+
+        protected override OptionData Update(string description) =>
+            Update(Name, ShortName, ValueName, description);
+
+        protected virtual NamedValueOptionData Update(string name, ShortOptionName shortName, string valueName, string description) =>
+            new NamedValueOptionData(name, shortName, valueName, description);
+    }
+
     public interface IArgTrait {}
     public interface IOptionArg         : IArgTrait       {}
     public interface INamedOptionArg    : IOptionArg      {}
