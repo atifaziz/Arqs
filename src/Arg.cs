@@ -22,26 +22,134 @@ namespace Largs
 
     public interface IArg : IArgBinder
     {
-        PropertySet Properties { get; }
-        IArg WithProperties(PropertySet value);
-        IParser Parser { get; }
         IAccumulator CreateAccumulator();
+
+        string Description { get; }
+        IArg WithDescription(string value);
     }
 
     public interface IArgTrait {}
-    public interface IOptionArg         : IArgTrait       {}
-    public interface INamedOptionArg    : IOptionArg      {}
-    public interface IFlagOptionArg     : INamedOptionArg {}
-    public interface IIntOptArg         : IOptionArg      {}
     public interface IOperandArg        : IArgTrait       {}
     public interface ILiteralArg        : IArgTrait       {}
     public interface ITailArg           : IArgTrait       {}
 
-    public interface IArg<out T, V, out A> : IArg, IArgBinder<T>
+    public interface IOptionArg : IArg
     {
-        new IParser<V> Parser { get; }
-        new IArg<T, V, A> WithProperties(PropertySet value);
+        bool IsFlag { get;}
+        new IOptionArg WithDescription(string value);
+    }
+
+    public interface IOptionArg<out T> : IArg, IArgBinder<T>
+    {
         new IAccumulator<T> CreateAccumulator();
+        new IOptionArg<T> WithDescription(string value);
+    }
+
+    public interface INamedOptionArg : IOptionArg
+    {
+        string Name { get; }
+        ShortOptionName ShortName { get; }
+        new INamedOptionArg WithDescription(string value);
+        INamedOptionArg WithName(string value);
+        INamedOptionArg WithShortName(ShortOptionName value);
+    }
+
+    public interface INamedOptionArg<out T> : INamedOptionArg, IOptionArg<T>
+    {
+        new INamedOptionArg<T> WithDescription(string value);
+        new INamedOptionArg<T> WithName(string value);
+        new INamedOptionArg<T> WithShortName(ShortOptionName value);
+    }
+
+    public interface IFlagOptionArg : INamedOptionArg<bool>
+    {
+        new IFlagOptionArg WithDescription(string value);
+        new IFlagOptionArg WithName(string value);
+        new IFlagOptionArg WithShortName(ShortOptionName value);
+    }
+
+    public interface IIntOptArg : IOptionArg, IOptionArg<int>
+    {
+        new IIntOptArg WithDescription(string value);
+    }
+
+    sealed class NamedOptionArg<T> : INamedOptionArg<T>
+    {
+        object IArgBinder.Bind(Func<IAccumulator> source)
+        {
+            return Bind(source);
+        }
+
+        public T Bind(Func<IAccumulator> source)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<IArg> Inspect()
+        {
+            throw new NotImplementedException();
+        }
+
+        IAccumulator IArg.CreateAccumulator()
+        {
+            return CreateAccumulator();
+        }
+
+        INamedOptionArg<T> INamedOptionArg<T>.WithDescription(string value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public INamedOptionArg<T> WithName(string value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public INamedOptionArg<T> WithShortName(ShortOptionName value)
+        {
+            throw new NotImplementedException();
+        }
+
+        IOptionArg<T> IOptionArg<T>.WithDescription(string value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IAccumulator<T> CreateAccumulator()
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Description { get; }
+        INamedOptionArg INamedOptionArg.WithDescription(string value)
+        {
+            throw new NotImplementedException();
+        }
+
+        INamedOptionArg INamedOptionArg.WithName(string value)
+        {
+            return WithName(value);
+        }
+
+        INamedOptionArg INamedOptionArg.WithShortName(ShortOptionName value)
+        {
+            return WithShortName(value);
+        }
+
+        public string Name { get; }
+        public ShortOptionName ShortName { get; }
+
+        IOptionArg IOptionArg.WithDescription(string value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsFlag { get; }
+
+        IArg IArg.WithDescription(string value)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     sealed class Arg<T, V, A> : IArg<T, V, A>
