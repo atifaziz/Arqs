@@ -28,31 +28,23 @@ namespace Largs
         IAccumulator CreateAccumulator();
     }
 
-    public interface IArgTrait   {}
-    public interface IOptionArg  : IArgTrait {}
-    public interface IIntOptArg  : IArgTrait {}
-    public interface IOperandArg : IArgTrait {}
-    public interface ILiteralArg : IArgTrait {}
-    public interface ITailArg    : IArgTrait {}
+    public interface IArgTrait {}
+    public interface IOptionArg         : IArgTrait       {}
+    public interface INamedOptionArg    : IOptionArg      {}
+    public interface IFlagOptionArg     : INamedOptionArg {}
+    public interface IIntOptArg         : IOptionArg      {}
+    public interface IOperandArg        : IArgTrait       {}
+    public interface ILiteralArg        : IArgTrait       {}
+    public interface ITailArg           : IArgTrait       {}
 
-    public interface IArg<out T, V, A> : IArg, IArgBinder<T>
+    public interface IArg<out T, V, out A> : IArg, IArgBinder<T>
     {
         new IParser<V> Parser { get; }
         new IArg<T, V, A> WithProperties(PropertySet value);
         new IAccumulator<T> CreateAccumulator();
     }
 
-    interface IArgVisitable
-    {
-        T Accept<T>(IArgVisitor<T> visitor);
-    }
-
-    interface IArgVisitor<out R>
-    {
-        R Visit<T, V, A>(IArg<T, V, A> arg);
-    }
-
-    sealed class Arg<T, V, A> : IArg<T, V, A>, IArgVisitable
+    sealed class Arg<T, V, A> : IArg<T, V, A>
     {
         readonly Func<IAccumulator<T>> _accumulatorFactory;
         readonly Func<IAccumulator<T>, T> _binder;
@@ -82,8 +74,6 @@ namespace Largs
 
         IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
 
-        R IArgVisitable.Accept<R>(IArgVisitor<R> visitor) => visitor.Visit(this);
-
         public IAccumulator<T> CreateAccumulator() => _accumulatorFactory();
 
         object IArgBinder.Bind(Func<IAccumulator> source) => Bind(source);
@@ -101,33 +91,20 @@ namespace Largs
             public static readonly Symbol Name        = Symbol.New(nameof(Name));
             public static readonly Symbol ShortName   = Symbol.New(nameof(ShortName));
             public static readonly Symbol Description = Symbol.New(nameof(Description));
-            public static readonly Symbol IsFlag      = Symbol.New(nameof(IsFlag));
-            public static readonly Symbol IsList      = Symbol.New(nameof(IsList));
+            public static readonly Symbol Trait       = Symbol.New(nameof(Trait));
         }
 
         public static bool IsFlag(this IArg arg) =>
             arg.Properties.IsFlag();
 
         public static bool IsFlag(this PropertySet properties) =>
-            (bool?)properties[Symbols.IsFlag] ?? false;
+            properties[Symbols.Trait] is IFlagOptionArg;
 
-        public static T WithIsFlag<T>(this T arg, bool value) where T : IArg =>
-            (T)arg.WithProperties(arg.Properties.WithIsFlag(value));
+        public static bool IsIntOpt(this IArg arg) =>
+            arg.Properties.IsIntOpt();
 
-        public static PropertySet WithIsFlag(this PropertySet properties, bool value) =>
-            properties.Set(Symbols.IsFlag, value);
-
-        public static bool IsList(this IArg arg) =>
-            arg.Properties.IsList();
-
-        public static bool IsList(this PropertySet properties) =>
-            (bool?)properties[Symbols.IsList] ?? false;
-
-        public static T WithIsList<T>(this T arg, bool value) where T : IArg =>
-            (T)arg.WithProperties(arg.Properties.WithIsList(value));
-
-        public static PropertySet WithIsList(this PropertySet properties, bool value) =>
-            properties.Set(Symbols.IsList, value);
+        public static bool IsIntOpt(this PropertySet properties) =>
+            properties[Symbols.Trait] is IIntOptArg;
 
         public static string Name(this IArg arg) =>
             arg.Properties.Name();
@@ -135,8 +112,8 @@ namespace Largs
         public static string Name(this PropertySet properties) =>
             (string)properties[Symbols.Name];
 
-        public static T WithName<T>(this T arg, string value) where T : IArg =>
-            (T)arg.WithProperties(arg.Properties.WithName(value));
+        public static IArg<T, V, A> WithName<T, V, A>(this IArg<T, V, A> arg, string value) where A : INamedOptionArg =>
+            arg.WithProperties(arg.Properties.WithName(value));
 
         public static PropertySet WithName(this PropertySet properties, string value) =>
             properties.Set(Symbols.Name, value);
@@ -147,11 +124,11 @@ namespace Largs
         public static ShortOptionName ShortName(this PropertySet properties) =>
             (ShortOptionName)properties[Symbols.ShortName];
 
-        public static T WithShortName<T>(this T arg, char value) where T : IArg =>
+        public static IArg<T, V, A> WithShortName<T, V, A>(this IArg<T, V, A> arg, char value) where A : INamedOptionArg =>
             arg.WithShortName(ShortOptionName.From(value));
 
-        public static T WithShortName<T>(this T arg, ShortOptionName value) where T : IArg =>
-            (T)arg.WithProperties(arg.Properties.WithShortName(value));
+        public static IArg<T, V, A> WithShortName<T, V, A>(this IArg<T, V, A> arg, ShortOptionName value) where A : INamedOptionArg =>
+            arg.WithProperties(arg.Properties.WithShortName(value));
 
         public static PropertySet WithShortName(this PropertySet properties, char value) =>
             properties.WithShortName(ShortOptionName.From(value));
@@ -174,22 +151,39 @@ namespace Largs
 
     public partial class Arg
     {
-        static readonly IOptionArg OptionArg   = null;
-        static readonly IIntOptArg IntOptArg   = null;
-        static readonly IOperandArg OperandArg = null;
-        static readonly ILiteralArg LiteralArg = null;
-        static readonly ITailArg TailArg       = null;
+        static readonly INamedOptionArg NamedOptionArg = new Traits.NamedOptionArg();
+        static readonly IFlagOptionArg  FlagOptionArg  = new Traits.FlagOptionArg();
+        static readonly IIntOptArg      IntOptArg      = new Traits.IntOptArg();
+        static readonly IOperandArg     OperandArg     = new Traits.OperandArg();
+        static readonly ILiteralArg     LiteralArg     = new Traits.LiteralArg();
+        static readonly ITailArg        TailArg        = new Traits.TailArg();
+
+        static class Traits
+        {
+            public struct NamedOptionArg   : INamedOptionArg {}
+            public struct FlagOptionArg    : IFlagOptionArg  {}
+            public struct IntOptArg        : IIntOptArg      {}
+            public struct OperandArg       : IOperandArg     {}
+            public struct LiteralArg       : ILiteralArg     {}
+            public struct TailArg          : ITailArg        {}
+        }
 
         static IArg<T, V, A>
             Create<T, V, A>(A _, IParser<V> parser,
                          Func<IAccumulator<T>> accumulatorFactory,
                          Func<IAccumulator<T>, T> binder) =>
-            new Arg<T, V, A>(parser, accumulatorFactory, binder);
+            Create(_, PropertySet.Empty, parser, accumulatorFactory, binder);
+
+        static IArg<T, V, A>
+            Create<T, V, A>(A _, PropertySet properties, IParser<V> parser,
+                         Func<IAccumulator<T>> accumulatorFactory,
+                         Func<IAccumulator<T>, T> binder) =>
+            new Arg<T, V, A>(properties.Set(Symbols.Trait, _), parser, accumulatorFactory, binder);
 
         public static readonly IParser<bool> BooleanPlusMinusParser = Parser.Boolean("+", "-");
         public static readonly IParser<int> BinaryPlusMinusParser = from f in BooleanPlusMinusParser select f ? 1 : 0;
 
-        public static IArg<bool, bool, IOptionArg> Flag(string name) =>
+        public static IArg<bool, bool, IFlagOptionArg> Flag(string name) =>
             name switch
             {
                 null => throw new ArgumentNullException(nameof(name)),
@@ -198,22 +192,20 @@ namespace Largs
                 _ => Flag(name, null)
             };
 
-        public static IArg<bool, bool, IOptionArg> Flag(char shortName) =>
+        public static IArg<bool, bool, IFlagOptionArg> Flag(char shortName) =>
             Flag(ShortOptionName.From(shortName));
 
-        public static IArg<bool, bool, IOptionArg> Flag(ShortOptionName shortName) =>
+        public static IArg<bool, bool, IFlagOptionArg> Flag(ShortOptionName shortName) =>
             Flag(null, shortName);
 
-        public static IArg<bool, bool, IOptionArg> Flag(string name, ShortOptionName shortName) =>
-            Create(OptionArg, BooleanPlusMinusParser,
+        public static IArg<bool, bool, IFlagOptionArg> Flag(string name, ShortOptionName shortName) =>
+            Create(FlagOptionArg, BooleanPlusMinusParser,
                    () => Accumulator.Value(BooleanPlusMinusParser),
                    r => r.Count > 0)
                 .WithName(name)
-                .WithShortName(shortName)
-                .WithIsFlag(true);
+                .WithShortName(shortName);
 
-
-        public static IArg<int, int, IOptionArg> CountedFlag(string name) =>
+        public static IArg<int, int, IFlagOptionArg> CountedFlag(string name) =>
             name switch
             {
                 null => throw new ArgumentNullException(nameof(name)),
@@ -222,21 +214,20 @@ namespace Largs
                 _ => CountedFlag(name, null)
             };
 
-        public static IArg<int, int, IOptionArg> CountedFlag(char shortName) =>
+        public static IArg<int, int, IFlagOptionArg> CountedFlag(char shortName) =>
             CountedFlag(ShortOptionName.From(shortName));
 
-        public static IArg<int, int, IOptionArg> CountedFlag(ShortOptionName shortName) =>
+        public static IArg<int, int, IFlagOptionArg> CountedFlag(ShortOptionName shortName) =>
             CountedFlag(null, shortName);
 
-        public static IArg<int, int, IOptionArg> CountedFlag(string name, ShortOptionName shortName) =>
-            Create(OptionArg, BinaryPlusMinusParser,
+        public static IArg<int, int, IFlagOptionArg> CountedFlag(string name, ShortOptionName shortName) =>
+            Create(FlagOptionArg, BinaryPlusMinusParser,
                    () => Accumulator.Value(BinaryPlusMinusParser, 0, (acc, f) => acc + f),
                    r => r.GetResult())
                 .WithName(name)
-                .WithShortName(shortName)
-                .WithIsFlag(true);
+                .WithShortName(shortName);
 
-        public static IArg<T, T, IOptionArg> Option<T>(string name, T @default, IParser<T> parser) =>
+        public static IArg<T, T, INamedOptionArg> Option<T>(string name, T @default, IParser<T> parser) =>
             name switch
             {
                 null => throw new ArgumentNullException(nameof(name)),
@@ -245,18 +236,18 @@ namespace Largs
                 _ => Option(name, null, @default, parser)
             };
 
-        public static IArg<T, T, IOptionArg> Option<T>(char shortName, T @default, IParser<T> parser) =>
+        public static IArg<T, T, INamedOptionArg> Option<T>(char shortName, T @default, IParser<T> parser) =>
             Option(ShortOptionName.From(shortName), @default, parser);
 
-        public static IArg<T, T, IOptionArg> Option<T>(ShortOptionName shortName, T @default, IParser<T> parser) =>
+        public static IArg<T, T, INamedOptionArg> Option<T>(ShortOptionName shortName, T @default, IParser<T> parser) =>
             Option(null, shortName, @default, parser);
 
-        public static IArg<T, T, IOptionArg> Option<T>(string name, ShortOptionName shortName, T @default, IParser<T> parser) =>
-            Create(OptionArg, parser, () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default)
+        public static IArg<T, T, INamedOptionArg> Option<T>(string name, ShortOptionName shortName, T @default, IParser<T> parser) =>
+            Create(NamedOptionArg, parser, () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default)
                 .WithName(name)
                 .WithShortName(shortName);
 
-        public static IArg<T, T, IOptionArg> Option<T>(string name, IParser<T> parser) =>
+        public static IArg<T, T, INamedOptionArg> Option<T>(string name, IParser<T> parser) =>
             name switch
             {
                 null => throw new ArgumentNullException(nameof(name)),
@@ -265,13 +256,13 @@ namespace Largs
                 _ => Option(name, null, parser)
             };
 
-        public static IArg<T, T, IOptionArg> Option<T>(char shortName, IParser<T> parser) =>
+        public static IArg<T, T, INamedOptionArg> Option<T>(char shortName, IParser<T> parser) =>
             Option(ShortOptionName.From(shortName), parser);
 
-        public static IArg<T, T, IOptionArg> Option<T>(ShortOptionName shortName, IParser<T> parser) =>
+        public static IArg<T, T, INamedOptionArg> Option<T>(ShortOptionName shortName, IParser<T> parser) =>
             Option(null, shortName, parser);
 
-        public static IArg<T, T, IOptionArg> Option<T>(string name, ShortOptionName shortName, IParser<T> parser) =>
+        public static IArg<T, T, INamedOptionArg> Option<T>(string name, ShortOptionName shortName, IParser<T> parser) =>
             Option(name, shortName, default, parser);
 
         public static IArg<int, int, IIntOptArg> IntOpt(string name) =>
@@ -321,6 +312,7 @@ namespace Largs
 
         static IArg<ImmutableArray<T>, T, A> List<T, A>(IArg<T, T, A> arg) =>
             Create(default(A),
+                   arg.Properties,
                    arg.Parser,
                    () =>
                        Accumulator.Create(ImmutableArray.CreateBuilder<T>(),
@@ -333,12 +325,12 @@ namespace Largs
                                return ParseResult.Success(array);
                            },
                            a => a.ToImmutable()),
-                       r => r.GetResult())
-                .WithProperties(arg.Properties.Set(Symbols.IsList, true));
+                       r => r.GetResult());
 
         public static IArg<ImmutableArray<T>, T, ITailArg> Tail<T, A>(this IArg<T, T, A> arg)
             where A : IOperandArg =>
             Create(TailArg,
+                   arg.Properties,
                    arg.Parser,
                    () =>
                        Accumulator.Create(ImmutableArray<T>.Empty,
@@ -357,24 +349,5 @@ namespace Largs
                            r => r),
                    r => r.GetResult())
                 .WithProperties(arg.Properties);
-
-        public static bool IsOption (this IArg arg) => arg.Is<IOptionArg >();
-        public static bool IsIntOpt (this IArg arg) => arg.Is<IIntOptArg >();
-        public static bool IsOperand(this IArg arg) => arg.Is<IOperandArg>();
-        public static bool IsLiteral(this IArg arg) => arg.Is<ILiteralArg>();
-        public static bool IsTail   (this IArg arg) => arg.Is<ITailArg   >();
-
-        static bool Is<T>(this IArg arg) where T : IArgTrait =>
-            ((IArgVisitable)arg).Accept(ArgTypeVisitor.Instance) is var (_, _, t) && t == typeof(T);
-
-        sealed class ArgTypeVisitor : IArgVisitor<(Type, Type, Type)>
-        {
-            public static readonly IArgVisitor<(Type, Type, Type)> Instance = new ArgTypeVisitor();
-
-            ArgTypeVisitor() {}
-
-            (Type, Type, Type) IArgVisitor<(Type, Type, Type)>.Visit<T, V, A>(IArg<T, V, A> _) =>
-                (typeof(T), typeof(V), typeof(A));
-        }
     }
 }
