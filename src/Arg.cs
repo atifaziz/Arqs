@@ -110,9 +110,6 @@ namespace Largs
                          Func<IAccumulator<T>, T> binder) where TInfo : IArgInfo =>
             new Arg<T, TInfo>(data, accumulatorFactory, binder);
 
-        public static readonly IParser<bool> BooleanPlusMinusParser = Parser.Boolean("+", "-");
-        public static readonly IParser<int> BinaryPlusMinusParser = from f in BooleanPlusMinusParser select f ? 1 : 0;
-
         public static IArg<bool, OptionArgInfo> Flag(string name) =>
             name switch
             {
