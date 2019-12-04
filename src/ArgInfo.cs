@@ -105,36 +105,44 @@ namespace Largs
             this(argKind, name, shortName, valueName, null) {}
 
         public OptionArgInfo(OptionArgKind argKind, string name, ShortOptionName shortName, string valueName, string description) :
+            this(argKind, name, shortName, valueName, false, description) {}
+
+        public OptionArgInfo(OptionArgKind argKind, string name, ShortOptionName shortName, string valueName, bool isValueOptional, string description) :
             base(description)
         {
             ArgKind = argKind;
             Name = name;
             ShortName = shortName;
+            IsValueOptional = isValueOptional;
             ValueName = valueName ?? DefaultValueName;
         }
 
         public OptionArgKind ArgKind { get; }
         public string Name { get; }
         public ShortOptionName ShortName { get; }
+        public bool IsValueOptional { get; }
         public string ValueName { get; }
 
         public OptionArgInfo WithName(string value) =>
-            Update(value, ShortName, ValueName, Description);
+            Update(value, ShortName, IsValueOptional, ValueName, Description);
 
         public OptionArgInfo WithShortName(ShortOptionName value) =>
-            Update(Name, value, ValueName, Description);
+            Update(Name, value, IsValueOptional, ValueName, Description);
+
+        public OptionArgInfo WithIsValueOptional(bool value) =>
+            Update(Name, ShortName, value, ValueName, Description);
 
         public OptionArgInfo WithValueName(string value) =>
-            Update(value, ShortName, value, Description);
+            Update(value, ShortName, IsValueOptional, value, Description);
 
         public new OptionArgInfo WithDescription(string value) =>
-            Update(Name, ShortName, ValueName, value);
+            Update(Name, ShortName, IsValueOptional, ValueName, value);
 
         protected override ArgInfo Update(string description) =>
-            Update(Name, ShortName, ValueName, description);
+            Update(Name, ShortName, IsValueOptional, ValueName, description);
 
-        protected virtual OptionArgInfo Update(string name, ShortOptionName shortName, string valueName, string description) =>
-            new OptionArgInfo(ArgKind, name, shortName, valueName, description);
+        protected virtual OptionArgInfo Update(string name, ShortOptionName shortName, bool isValueOptional, string valueName, string description) =>
+            new OptionArgInfo(ArgKind, name, shortName, valueName, isValueOptional, description);
     }
 
     public class IntegerOptionArgInfo : ArgInfo

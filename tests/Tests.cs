@@ -16,6 +16,7 @@
 
 namespace Largs.Tests
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using NUnit.Framework;
@@ -36,15 +37,20 @@ namespace Largs.Tests
                 join bar  in Arg.Flag("bar")  on 1 equals 1
                 join baz  in Arg.Option("baz", Parser.Int32().Nullable())  on 1 equals 1
                 join qux  in Arg.Option("qux", "?", Parser.String()) on 1 equals 1
+                join opt  in Arg.Option("opt", ShortOptionName.From('o'), "?", Parser.String()).WithIsValueOptional(true).List() on 1 equals 1
                 join xs   in Arg.Option("x", Parser.String()).List() on 1 equals 1
                 join @int in Arg.IntOpt("int") on 1 equals 1
                 join pos1 in Arg.Operand("x", Parser.String()) on 1 equals 1
                 join pos2 in Arg.Operand("x", Parser.String()) on 1 equals 1
-                select new { Verbosity = vl, Foo = foo, Bar = bar, Baz = baz, Qux = qux, X = string.Join(",", xs), Int = @int, Pos1 = pos1, Pos2 = pos2 }
+                select new { Verbosity = vl, Foo = foo, Bar = bar, Baz = baz, Qux = qux, Opt = opt, X = string.Join(",", xs), Int = @int, Pos1 = pos1, Pos2 = pos2 }
                 into e
                 select (3, e);
 
-            var commandLine = "1 --bar -v -v -v --foo 4 2 hello --foo 2 -x one -42 -x two world -x three".Split();
+            var commandLine = @"
+                1 --bar -v -v -v --foo 4 2 hello
+                -o foo -obar -o
+                --foo 2 -x one -42 -x two world -x three"
+                    .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
             var (mode, result, tail) =
                 ArgBinder.Bind(help, version, args, commandLine);
@@ -56,6 +62,7 @@ namespace Largs.Tests
             Assert.That(result.Bar, Is.True);
             Assert.That(result.Baz, Is.Null);
             Assert.That(result.Qux, Is.EqualTo("?"));
+            Assert.That(result.Opt, Is.EqualTo(new[] { "foo", "bar", "?" }));
             Assert.That(result.X, Is.EqualTo("one,two,three"));
             Assert.That(result.Int, Is.EqualTo(42));
             Assert.That(result.Pos1, Is.EqualTo("1"));
@@ -70,6 +77,7 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("qux"));
+            Assert.That(infos.Dequeue().Name(), Is.EqualTo("opt"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("x"));
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
@@ -77,17 +85,15 @@ namespace Largs.Tests
 
             (mode, result, tail) =
                 ArgBinder.Bind(help, version, args,
-                               commandLine.Prepend("-h").Prepend("-V").ToArray());
+                               commandLine.Prepend("-h").ToArray());
 
             Assert.That(mode, Is.EqualTo(1));
-            Assert.That(tail, Is.EqualTo(commandLine.Prepend("-V")));
 
             (mode, result, tail) =
                 ArgBinder.Bind(help, version, args,
                                commandLine.Prepend("-V").ToArray());
 
             Assert.That(mode, Is.EqualTo(2));
-            Assert.That(tail, Is.EqualTo(commandLine));
         }
 
         [Test]

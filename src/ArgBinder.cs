@@ -41,38 +41,29 @@ namespace Largs
             Create(bindings => (first.Bind(bindings), second.Bind(bindings)),
                    () => first.Inspect().Concat(second.Inspect()));
 
-        enum BindMode { Strict, Tolerant }
-
-        public static (T Result, ImmutableArray<string> Tail)
-            Bind<T>(this IArgBinder<T> binder, params string[] args) =>
-            binder.Bind(BindMode.Strict, args);
-
         public static (M Mode, T Result, ImmutableArray<string> Tail)
             Bind<T, M>(IArgBinder<(bool, M)> modalBinder1,
                        IArgBinder<(bool, M)> modalBinder2,
                        IArgBinder<(M, T)> binder,
                        params string[] args) =>
-            Bind(new[] { modalBinder1, modalBinder2 }, binder, args);
-
-        public static (M Mode, T Result, ImmutableArray<string> Tail)
-            Bind<T, M>(IEnumerable<IArgBinder<(bool, M)>> modalBinders,
-                       IArgBinder<(M, T)> binder,
-                       params string[] args)
-        {
-            ImmutableArray<string> tail;
-            foreach (var modalBinder in modalBinders)
+            binder.Bind(new[] { modalBinder1, modalBinder2 }, args) switch
             {
-                var ((flag, mode), tail2) = modalBinder.Bind(BindMode.Tolerant, args);
-                if (flag)
-                    return (mode, default, tail2);
-                tail = tail2;
-            }
-            var ((mode3, result), tail3) = binder.Bind(tail.ToArray());
-            return (mode3, result, tail3);
+                (BindResult.Result, var (mode, result), _, var tail) => (mode, result, tail),
+                var (_, _, mode, tail) => (mode, default, tail),
+            };
+
+        public static (T Result, ImmutableArray<string> Tail)
+            Bind<T>(this IArgBinder<T> binder, params string[] args)
+        {
+            var (_, result, _, tail) = binder.Bind(Enumerable.Empty<IArgBinder<(bool, object)>>(), args);
+            return (result, tail);
         }
 
-        static (T Result, ImmutableArray<string> Tail)
-            Bind<T>(this IArgBinder<T> binder, BindMode mode, params string[] args)
+        enum BindResult { Result, Mode }
+
+        static (BindResult, T Result, M Mode, ImmutableArray<string> Tail)
+            Bind<T, M>(this IArgBinder<T> binder, IEnumerable<IArgBinder<(bool, M)>> modalBinders,
+                       params string[] args)
         {
             var specs = binder.Inspect().ToList();
 
@@ -104,7 +95,7 @@ namespace Largs
                                 throw new Exception("Invalid option: " + arg);
                             nsi = i + 1;
                         }
-                        else if (mode == BindMode.Tolerant)
+                        else
                         {
                             tail.Add(reader.Read());
                         }
@@ -115,20 +106,29 @@ namespace Largs
                     if (arg.Length > 2)
                     {
                         reader.Read();
-                        foreach (var ch in arg.Substring(1).Reverse())
+                        int j;
+                        for (j = 1; j < arg.Length; j++)
                         {
+                            var ch = arg[j];
                             var i = specs.FindIndex(e => e.ShortName() is ShortOptionName sn && sn == ch);
                             if (i >= 0)
                             {
+                                if (specs[i].Info is OptionArgInfo info && info.ArgKind == OptionArgKind.Standard)
+                                {
+                                    if (j + 1 < arg.Length)
+                                        reader.Unread(arg.Substring(j + 1));
+                                    reader.Unread("-" + ch);
+                                    break;
+                                }
+
                                 reader.Unread("-" + ch);
                             }
                             else
                             {
-                                if (mode == BindMode.Strict)
-                                    throw new Exception("Invalid option: " + ch);
-                                tail.Add("-" + ch);
+                                throw new Exception("Invalid option: " + ch);
                             }
                         }
+
                         continue;
                     }
 
@@ -161,28 +161,34 @@ namespace Largs
                     if (i >= 0)
                     {
                         reader.Read();
-                        if (!accumulators[i].Read(reader))
+
+                        if (specs[i].Info is OptionArgInfo info && info.IsValueOptional && (!reader.TryPeek(out var next) || next.Length > 0 && next[0] == '-'))
+                        {
+                            accumulators[i].ReadDefault();
+                        }
+                        else if (!accumulators[i].Read(reader))
                         {
                             var (ln, sn) = name;
                             throw new Exception("Invalid value for option: " + (ln ?? sn.ToString()));
                         }
+
+                        if (modalBinders.SelectMany(mb => from arg in mb.Inspect() select new { Original = mb, Arg = arg })
+                                        .FirstOrDefault(mb => mb.Arg == specs[i])?.Original is IArgBinder<(bool, M)> modalBinder)
+                        {
+                            if (modalBinder.Bind(() => accumulators[i]) is (true, var mode))
+                                return (BindResult.Mode, default, mode, tail.ToImmutableArray());
+                        }
                     }
                     else
                     {
-                        if (mode == BindMode.Strict)
-                        {
-                            var (ln, sn) = name;
-                            throw new Exception("Invalid option: " + (ln ?? sn.ToString()));
-                        }
-
-                        reader.Read();
-                        tail.Add(arg);
+                        var (ln, sn) = name;
+                        throw new Exception("Invalid option: " + (ln ?? sn.ToString()));
                     }
                 }
             }
 
             var ar = accumulators.Read();
-            return (binder.Bind(() => ar.Read()), tail.ToImmutableArray());
+            return (BindResult.Result, binder.Bind(() => ar.Read()), default, tail.ToImmutableArray());
 
             static bool IsDigital(string s, int start, int end)
             {

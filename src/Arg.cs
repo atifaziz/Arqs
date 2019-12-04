@@ -102,6 +102,9 @@ namespace Largs
         public static IArg<T, OptionArgInfo> WithDescription<T>(this IArg<T, OptionArgInfo> arg, string value) =>
             arg.WithInfo(arg.Info.WithDescription(value));
 
+        public static IArg<T, OptionArgInfo> WithIsValueOptional<T>(this IArg<T, OptionArgInfo> arg, bool value) =>
+            arg.WithInfo(arg.Info.WithIsValueOptional(value));
+
         static IArg<T, TInfo>
             Create<T, TInfo>(TInfo data, Func<IAccumulator<T>> accumulatorFactory,
                          Func<IAccumulator<T>, T> binder) where TInfo : IArgInfo =>
@@ -166,7 +169,7 @@ namespace Largs
             Option(null, shortName, @default, parser);
 
         public static IArg<T, OptionArgInfo> Option<T>(string name, ShortOptionName shortName, T @default, IParser<T> parser) =>
-            Create(new OptionArgInfo(name, shortName), () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default);
+            Create(new OptionArgInfo(name, shortName), () => Accumulator.Value(parser, default, @default, (_, v) => v), r => r.Count > 0 ? r.GetResult() : @default);
 
         public static IArg<T, OptionArgInfo> Option<T>(string name, IParser<T> parser) =>
             name switch
@@ -243,6 +246,13 @@ namespace Largs
                                    return default;
                                array.Add(arg.Bind(() => accumulator));
                                return ParseResult.Success(array);
+                           },
+                           array =>
+                           {
+                               var accumulator = arg.CreateAccumulator();
+                               accumulator.ReadDefault();
+                               array.Add(arg.Bind(() => accumulator));
+                               return array;
                            },
                            a => a.ToImmutable()),
                        r => r.Count > 0 ? r.GetResult() : ImmutableArray<T>.Empty);

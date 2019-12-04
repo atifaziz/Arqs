@@ -23,6 +23,7 @@ namespace Largs
         int Count { get; }
         object GetResult();
         bool Read(Reader<string> arg);
+        void ReadDefault();
     }
 
     public interface IAccumulator<out T> : IAccumulator
@@ -45,6 +46,12 @@ namespace Largs
                                      ? ParseResult.Success(folder(acc, v)) : default,
                          v => v);
 
+        public static IAccumulator<T> Value<T>(IParser<T> parser, T seed, T @default, Func<T, T, T> folder) =>
+            Create(seed, (acc, arg) => arg.TryRead(out var s) && parser.Parse(s) is (true, var v)
+                                     ? ParseResult.Success(folder(acc, v)) : default,
+                         s => folder(s, @default),
+                         v => v);
+
         public static IAccumulator<T> Return<T>(T value) =>
             new DelegatingAccumulator<T, T>(true, value, (v, arg) => ParseResult.Success(v), r => r);
 
@@ -54,6 +61,9 @@ namespace Largs
         public static IAccumulator<R> Create<T, R>(T seed, Func<T, Reader<string>, ParseResult<T>> reader, Func<T, R> resultSelector) =>
             new DelegatingAccumulator<T, R>(seed, reader, resultSelector);
 
+        public static IAccumulator<R> Create<T, R>(T seed, Func<T, Reader<string>, ParseResult<T>> reader, Func<T, T> defaultor, Func<T, R> resultSelector) =>
+            new DelegatingAccumulator<T, R>(seed, reader, defaultor, resultSelector);
+
         public static IAccumulator<U> Select<T, U>(this IAccumulator<T> accumulator, Func<T, U> f) =>
             Create(0, (count, arg) => accumulator.Read(arg) ? ParseResult.Success(count + 1) : default,
                    r => f(accumulator.GetResult()));
@@ -61,20 +71,36 @@ namespace Largs
         sealed class DelegatingAccumulator<S, R> : IAccumulator<R>
         {
             readonly Func<S, Reader<string>, ParseResult<S>> _reader;
+            readonly Func<S, S> _defaultor;
             readonly Func<S, R> _resultSelector;
             S _state;
             bool _errored;
 
-            public DelegatingAccumulator(S seed, Func<S, Reader<string>, ParseResult<S>> reader,
+            public DelegatingAccumulator(bool initialized, S seed,
+                                         Func<S, Reader<string>, ParseResult<S>> reader,
                                          Func<S, R> resultSelector) :
-                this(false, seed, reader, resultSelector) {}
+                this(initialized, seed, reader, null, resultSelector) {}
 
-            public DelegatingAccumulator(bool initialized, S seed, Func<S, Reader<string>, ParseResult<S>> reader,
+            public DelegatingAccumulator(S seed,
+                                         Func<S, Reader<string>, ParseResult<S>> reader,
+                                         Func<S, R> resultSelector) :
+                this(seed, reader, null, resultSelector) {}
+
+            public DelegatingAccumulator(S seed,
+                                         Func<S, Reader<string>, ParseResult<S>> reader,
+                                         Func<S, S> defaultor,
+                                         Func<S, R> resultSelector) :
+                this(false, seed, reader, defaultor, resultSelector) {}
+
+            public DelegatingAccumulator(bool initialized, S seed,
+                                         Func<S, Reader<string>, ParseResult<S>> reader,
+                                         Func<S, S> defaultor,
                                          Func<S, R> resultSelector)
             {
                 Count = initialized ? 1 : 0;
                 _state = seed;
                 _reader = reader ?? throw new ArgumentNullException(nameof(reader));
+                _defaultor = defaultor;
                 _resultSelector = resultSelector;
             }
 
@@ -101,6 +127,16 @@ namespace Largs
                         _state = default;
                         return false;
                 }
+            }
+
+            public void ReadDefault()
+            {
+                if (_errored)
+                    throw new InvalidOperationException();
+                if (_defaultor == null)
+                    throw new InvalidOperationException();
+                Count++;
+                _state = _defaultor(_state);
             }
         }
     }
