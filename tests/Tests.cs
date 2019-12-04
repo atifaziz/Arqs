@@ -43,7 +43,7 @@ namespace Largs.Tests
             var commandLine = @"
                 1 --bar -v -v -v --foo 4 2 hello
                 -o foo -obar -o --opt=baz
-                --foo 2 -x one -42 -x two world -x three"
+                --foo 2 -x one -42 -x two - world -x three"
                     .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
             var (result, tail) =
@@ -59,7 +59,7 @@ namespace Largs.Tests
             Assert.That(result.Int, Is.EqualTo(42));
             Assert.That(result.Pos1, Is.EqualTo("1"));
             Assert.That(result.Pos2, Is.EqualTo("2"));
-            Assert.That(tail, Is.EqualTo(new[] { "hello", "world" }));
+            Assert.That(tail, Is.EqualTo(new[] { "hello", "-", "world" }));
 
             var infos = new Queue<IArg>(args.Inspect());
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("h"));
