@@ -137,7 +137,7 @@ namespace Largs
 
                 if (name == default)
                 {
-                    var i = specs.FindIndex(asi, e => e.Name() == null && e.ShortName() == null && !e.IsIntegerOption());
+                    var i = specs.FindIndex(asi, e => e.IsOperand() || e.IsLiteral());
                     if (i >= 0)
                     {
                         asi = i + 1;

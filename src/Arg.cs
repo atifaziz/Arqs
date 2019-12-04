@@ -82,6 +82,12 @@ namespace Largs
         public static bool IsIntegerOption(this IArg arg) =>
             arg.Data is IntegerOptionArgData;
 
+        public static bool IsOperand(this IArg arg) =>
+            arg.Data is OperandArgData;
+
+        public static bool IsLiteral(this IArg arg) =>
+            arg.Data is LiteralArgData;
+
         public static string Name(this IArg arg) =>
             arg.Data is OptionArgData data ? data.Name : null;
 
