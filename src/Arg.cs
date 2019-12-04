@@ -67,7 +67,7 @@ namespace Largs
         public IEnumerable<IArg> Inspect() { yield return this; }
     }
 
-    public static partial class Arg
+    public static class Arg
     {
         public static bool IsFlag(this IArg arg) =>
             arg.Data is OptionArgData data && data.Kind == OptionKind.Flag;
@@ -101,10 +101,7 @@ namespace Largs
 
         public static IArg<T, OptionArgData> WithDescription<T>(this IArg<T, OptionArgData> arg, string value) =>
             arg.WithData(arg.Data.WithDescription(value));
-    }
 
-    public partial class Arg
-    {
         static IArg<T, D>
             Create<T, D>(D data, Func<IAccumulator<T>> accumulatorFactory,
                          Func<IAccumulator<T>, T> binder) where D : IArgData =>
