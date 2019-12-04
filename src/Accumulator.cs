@@ -35,6 +35,11 @@ namespace Largs
         public static IAccumulator<T> Value<T>(IParser<T> parser) =>
             Value(parser, default, (_, v) => v);
 
+        static readonly IAccumulator<int> Counter =
+            Create(0, (count, _) => ParseResult.Success(count + 1), count => count);
+
+        public static IAccumulator<int> Count() => Counter;
+
         public static IAccumulator<T> Value<T>(IParser<T> parser, T seed, Func<T, T, T> folder) =>
             Create(seed, (acc, arg) => arg.TryRead(out var s) && parser.Parse(s) is (true, var v)
                                      ? ParseResult.Success(folder(acc, v)) : default,
@@ -42,6 +47,9 @@ namespace Largs
 
         public static IAccumulator<T> Return<T>(T value) =>
             new DelegatingAccumulator<T, T>(true, value, (v, arg) => ParseResult.Success(v), r => r);
+
+        public static IAccumulator<T> Create<T>(T seed, Func<T, Reader<string>, ParseResult<T>> reader) =>
+            new DelegatingAccumulator<T, T>(seed, reader, v => v);
 
         public static IAccumulator<R> Create<T, R>(T seed, Func<T, Reader<string>, ParseResult<T>> reader, Func<T, R> resultSelector) =>
             new DelegatingAccumulator<T, R>(seed, reader, resultSelector);

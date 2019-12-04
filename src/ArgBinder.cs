@@ -161,8 +161,6 @@ namespace Largs
                     if (i >= 0)
                     {
                         reader.Read();
-                        if (specs[i].IsFlag())
-                            reader.Unread("+");
                         if (!accumulators[i].Read(reader))
                         {
                             var (ln, sn) = name;

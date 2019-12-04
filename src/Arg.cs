@@ -127,7 +127,7 @@ namespace Largs
 
         public static IArg<bool, OptionArgInfo> Flag(string name, ShortOptionName shortName) =>
             Create(new OptionArgInfo(OptionArgKind.Flag, name, shortName),
-                   () => Accumulator.Value(BooleanPlusMinusParser),
+                   () => Accumulator.Create(false, (_, r) => ParseResult.Success(true)),
                    r => r.Count > 0);
 
         public static IArg<int, OptionArgInfo> CountedFlag(string name) =>
@@ -147,7 +147,7 @@ namespace Largs
 
         public static IArg<int, OptionArgInfo> CountedFlag(string name, ShortOptionName shortName) =>
             Create(new OptionArgInfo(OptionArgKind.Flag, name, shortName),
-                   () => Accumulator.Value(BinaryPlusMinusParser, 0, (acc, f) => acc + f),
+                   () => Accumulator.Create(0, (count, _) => ParseResult.Success(count + 1)),
                    r => r.GetResult());
 
         public static IArg<T, OptionArgInfo> Option<T>(string name, T @default, IParser<T> parser) =>
