@@ -245,7 +245,7 @@ namespace Largs
                                return ParseResult.Success(array);
                            },
                            a => a.ToImmutable()),
-                       r => r.GetResult());
+                       r => r.Count > 0 ? r.GetResult() : ImmutableArray<T>.Empty);
 
         public static IArg<ImmutableArray<T>, TInfo> Tail<T, TInfo>(this IArg<T, TInfo> arg)
             where TInfo : IArgInfo =>
