@@ -42,20 +42,20 @@ namespace Largs.Tests
 
             var commandLine = @"
                 1 --bar -v -v -v --foo 4 2 hello
-                -o foo -obar -o --opt=baz
-                --foo 2 -x one -42 -x two - world -x three"
+                -ofoo -obar -o --opt=baz -vo -vovo
+                --foo 2 -x one -42 -x two - world -x three -xfour"
                     .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
             var (result, tail) =
                 ArgBinder.Bind(args, commandLine);
 
-            Assert.That(result.Verbosity, Is.EqualTo(3));
+            Assert.That(result.Verbosity, Is.EqualTo(5));
             Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
             Assert.That(result.Bar, Is.True);
             Assert.That(result.Baz, Is.Null);
             Assert.That(result.Qux, Is.EqualTo("?"));
-            Assert.That(result.Opt, Is.EqualTo(new[] { "foo", "bar", "?", "baz" }));
-            Assert.That(result.X, Is.EqualTo("one,two,three"));
+            Assert.That(result.Opt, Is.EqualTo(new[] { "foo", "bar", "?", "baz", "?", "vo" }));
+            Assert.That(result.X, Is.EqualTo("one,two,three,four"));
             Assert.That(result.Int, Is.EqualTo(42));
             Assert.That(result.Pos1, Is.EqualTo("1"));
             Assert.That(result.Pos2, Is.EqualTo("2"));

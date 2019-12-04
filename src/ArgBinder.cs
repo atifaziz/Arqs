@@ -53,6 +53,7 @@ namespace Largs
             var asi = 0;
             var nsi = 0;
             var tail = new List<string>();
+            var isValueUnbundled = false;
 
             using var reader = args.Read();
             while (reader.TryPeek(out var arg))
@@ -68,6 +69,7 @@ namespace Largs
                         reader.Unread(longName.Substring(equalIndex + 1));
                         reader.Unread(arg);
                         longName = longName.Substring(0, equalIndex);
+                        isValueUnbundled = true;
                     }
                     name = (longName, null);
                 }
@@ -106,7 +108,10 @@ namespace Largs
                                 {
                                     unreads.Push("-" + ch);
                                     if (j + 1 < arg.Length)
+                                    {
                                         unreads.Push(arg.Substring(j + 1));
+                                        isValueUnbundled = true;
+                                    }
                                     break;
                                 }
 
@@ -154,7 +159,8 @@ namespace Largs
                     {
                         reader.Read();
 
-                        if (specs[i].Info is OptionArgInfo info && info.IsValueOptional && (!reader.TryPeek(out var next) || next.Length > 0 && next[0] == '-'))
+                        var info = (OptionArgInfo)specs[i].Info;
+                        if (info.IsValueOptional && !isValueUnbundled)
                         {
                             accumulators[i].AccumulateDefault();
                         }
@@ -163,6 +169,9 @@ namespace Largs
                             var (ln, sn) = name;
                             throw new Exception("Invalid value for option: " + (ln ?? sn.ToString()));
                         }
+
+                        if (info.ArgKind == OptionArgKind.Standard)
+                            isValueUnbundled = false;
                     }
                     else
                     {
