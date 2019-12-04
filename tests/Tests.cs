@@ -42,7 +42,7 @@ namespace Largs.Tests
 
             var commandLine = @"
                 1 --bar -v -v -v --foo 4 2 hello
-                -o foo -obar -o
+                -o foo -obar -o --opt=baz
                 --foo 2 -x one -42 -x two world -x three"
                     .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
@@ -54,7 +54,7 @@ namespace Largs.Tests
             Assert.That(result.Bar, Is.True);
             Assert.That(result.Baz, Is.Null);
             Assert.That(result.Qux, Is.EqualTo("?"));
-            Assert.That(result.Opt, Is.EqualTo(new[] { "foo", "bar", "?" }));
+            Assert.That(result.Opt, Is.EqualTo(new[] { "foo", "bar", "?", "baz" }));
             Assert.That(result.X, Is.EqualTo("one,two,three"));
             Assert.That(result.Int, Is.EqualTo(42));
             Assert.That(result.Pos1, Is.EqualTo("1"));

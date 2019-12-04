@@ -60,7 +60,16 @@ namespace Largs
                 (string, ShortOptionName) name = default;
                 if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
-                    name = (arg.Substring(2), null);
+                    var longName = arg.Substring(2);
+                    var equalIndex = longName.IndexOf('=');
+                    if (equalIndex > 0)
+                    {
+                        reader.Read();
+                        reader.Unread(longName.Substring(equalIndex + 1));
+                        reader.Unread(arg);
+                        longName = longName.Substring(0, equalIndex);
+                    }
+                    name = (longName, null);
                 }
                 else if (arg.Length > 1 && arg[0] == '-')
                 {
