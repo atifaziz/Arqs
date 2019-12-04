@@ -22,8 +22,8 @@ namespace Largs
     {
         int Count { get; }
         object GetResult();
-        bool Read(Reader<string> arg);
-        void ReadDefault();
+        bool Accumulate(Reader<string> arg);
+        void AccumulateDefault();
     }
 
     public interface IAccumulator<out T> : IAccumulator
@@ -65,7 +65,7 @@ namespace Largs
             new DelegatingAccumulator<T, R>(seed, reader, defaultor, resultSelector);
 
         public static IAccumulator<U> Select<T, U>(this IAccumulator<T> accumulator, Func<T, U> f) =>
-            Create(0, (count, arg) => accumulator.Read(arg) ? ParseResult.Success(count + 1) : default,
+            Create(0, (count, arg) => accumulator.Accumulate(arg) ? ParseResult.Success(count + 1) : default,
                    r => f(accumulator.GetResult()));
 
         sealed class DelegatingAccumulator<S, R> : IAccumulator<R>
@@ -111,7 +111,7 @@ namespace Largs
 
             object IAccumulator.GetResult() => GetResult();
 
-            public bool Read(Reader<string> arg)
+            public bool Accumulate(Reader<string> arg)
             {
                 if (_errored)
                     throw new InvalidOperationException();
@@ -129,7 +129,7 @@ namespace Largs
                 }
             }
 
-            public void ReadDefault()
+            public void AccumulateDefault()
             {
                 if (_errored)
                     throw new InvalidOperationException();

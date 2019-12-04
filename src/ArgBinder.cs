@@ -79,7 +79,7 @@ namespace Largs
                         if (i >= 0)
                         {
                             reader.Unread(reader.Read().Substring(1));
-                            if (!accumulators[i].Read(reader))
+                            if (!accumulators[i].Accumulate(reader))
                                 throw new Exception("Invalid option: " + arg);
                             nsi = i + 1;
                         }
@@ -133,7 +133,7 @@ namespace Largs
                     if (i >= 0)
                     {
                         asi = i + 1;
-                        if (!accumulators[i].Read(reader))
+                        if (!accumulators[i].Accumulate(reader))
                             throw new Exception("Invalid argument: " + arg);
                     }
                     else
@@ -156,9 +156,9 @@ namespace Largs
 
                         if (specs[i].Info is OptionArgInfo info && info.IsValueOptional && (!reader.TryPeek(out var next) || next.Length > 0 && next[0] == '-'))
                         {
-                            accumulators[i].ReadDefault();
+                            accumulators[i].AccumulateDefault();
                         }
-                        else if (!accumulators[i].Read(reader))
+                        else if (!accumulators[i].Accumulate(reader))
                         {
                             var (ln, sn) = name;
                             throw new Exception("Invalid value for option: " + (ln ?? sn.ToString()));

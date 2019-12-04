@@ -239,7 +239,7 @@ namespace Largs
                            (array, args) =>
                            {
                                var accumulator = arg.CreateAccumulator();
-                               if (!accumulator.Read(args))
+                               if (!accumulator.Accumulate(args))
                                    return default;
                                array.Add(arg.Bind(() => accumulator));
                                return ParseResult.Success(array);
@@ -247,7 +247,7 @@ namespace Largs
                            array =>
                            {
                                var accumulator = arg.CreateAccumulator();
-                               accumulator.ReadDefault();
+                               accumulator.AccumulateDefault();
                                array.Add(arg.Bind(() => accumulator));
                                return array;
                            },
@@ -265,7 +265,7 @@ namespace Largs
                                while (args.HasMore())
                                {
                                    var accumulator = arg.CreateAccumulator();
-                                   if (!accumulator.Read(args))
+                                   if (!accumulator.Accumulate(args))
                                        return default;
                                    array.Add(arg.Bind(() => accumulator));
                                }
