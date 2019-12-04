@@ -41,29 +41,8 @@ namespace Largs
             Create(bindings => (first.Bind(bindings), second.Bind(bindings)),
                    () => first.Inspect().Concat(second.Inspect()));
 
-        public static (M Mode, T Result, ImmutableArray<string> Tail)
-            Bind<T, M>(IArgBinder<(bool, M)> modalBinder1,
-                       IArgBinder<(bool, M)> modalBinder2,
-                       IArgBinder<(M, T)> binder,
-                       params string[] args) =>
-            binder.Bind(new[] { modalBinder1, modalBinder2 }, args) switch
-            {
-                (BindResult.Result, var (mode, result), _, var tail) => (mode, result, tail),
-                var (_, _, mode, tail) => (mode, default, tail),
-            };
-
         public static (T Result, ImmutableArray<string> Tail)
             Bind<T>(this IArgBinder<T> binder, params string[] args)
-        {
-            var (_, result, _, tail) = binder.Bind(Enumerable.Empty<IArgBinder<(bool, object)>>(), args);
-            return (result, tail);
-        }
-
-        enum BindResult { Result, Mode }
-
-        static (BindResult, T Result, M Mode, ImmutableArray<string> Tail)
-            Bind<T, M>(this IArgBinder<T> binder, IEnumerable<IArgBinder<(bool, M)>> modalBinders,
-                       params string[] args)
         {
             var specs = binder.Inspect().ToList();
 
@@ -106,6 +85,7 @@ namespace Largs
                     if (arg.Length > 2)
                     {
                         reader.Read();
+                        var unreads = new Stack<string>();
                         int j;
                         for (j = 1; j < arg.Length; j++)
                         {
@@ -115,19 +95,22 @@ namespace Largs
                             {
                                 if (specs[i].Info is OptionArgInfo info && info.ArgKind == OptionArgKind.Standard)
                                 {
+                                    unreads.Push("-" + ch);
                                     if (j + 1 < arg.Length)
-                                        reader.Unread(arg.Substring(j + 1));
-                                    reader.Unread("-" + ch);
+                                        unreads.Push(arg.Substring(j + 1));
                                     break;
                                 }
 
-                                reader.Unread("-" + ch);
+                                unreads.Push("-" + ch);
                             }
                             else
                             {
                                 throw new Exception("Invalid option: " + ch);
                             }
                         }
+
+                        while (unreads.Count > 0)
+                            reader.Unread(unreads.Pop());
 
                         continue;
                     }
@@ -171,13 +154,6 @@ namespace Largs
                             var (ln, sn) = name;
                             throw new Exception("Invalid value for option: " + (ln ?? sn.ToString()));
                         }
-
-                        if (modalBinders.SelectMany(mb => from arg in mb.Inspect() select new { Original = mb, Arg = arg })
-                                        .FirstOrDefault(mb => mb.Arg == specs[i])?.Original is IArgBinder<(bool, M)> modalBinder)
-                        {
-                            if (modalBinder.Bind(() => accumulators[i]) is (true, var mode))
-                                return (BindResult.Mode, default, mode, tail.ToImmutableArray());
-                        }
                     }
                     else
                     {
@@ -188,7 +164,7 @@ namespace Largs
             }
 
             var ar = accumulators.Read();
-            return (BindResult.Result, binder.Bind(() => ar.Read()), default, tail.ToImmutableArray());
+            return (binder.Bind(() => ar.Read()), tail.ToImmutableArray());
 
             static bool IsDigital(string s, int start, int end)
             {

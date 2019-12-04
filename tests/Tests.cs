@@ -18,7 +18,6 @@ namespace Largs.Tests
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using NUnit.Framework;
 
     public class Tests
@@ -26,12 +25,9 @@ namespace Largs.Tests
         [Test]
         public void Test1()
         {
-            var help    = from f in Arg.Flag("h") select (f, 1);
-            var version = from f in Arg.Flag("V") select (f, 2);
-
             var args =
-                from h    in help
-                join v    in version on 1 equals 1
+                from h    in Arg.Flag("h")
+                join v    in Arg.Flag("V") on 1 equals 1
                 join vl   in Arg.CountedFlag("v") on 1 equals 1
                 join foo  in Arg.Option("foo", -1, Parser.Int32()).List() on 1 equals 1
                 join bar  in Arg.Flag("bar")  on 1 equals 1
@@ -42,9 +38,7 @@ namespace Largs.Tests
                 join @int in Arg.IntOpt("int") on 1 equals 1
                 join pos1 in Arg.Operand("x", Parser.String()) on 1 equals 1
                 join pos2 in Arg.Operand("x", Parser.String()) on 1 equals 1
-                select new { Verbosity = vl, Foo = foo, Bar = bar, Baz = baz, Qux = qux, Opt = opt, X = string.Join(",", xs), Int = @int, Pos1 = pos1, Pos2 = pos2 }
-                into e
-                select (3, e);
+                select new { Verbosity = vl, Foo = foo, Bar = bar, Baz = baz, Qux = qux, Opt = opt, X = string.Join(",", xs), Int = @int, Pos1 = pos1, Pos2 = pos2 };
 
             var commandLine = @"
                 1 --bar -v -v -v --foo 4 2 hello
@@ -52,10 +46,8 @@ namespace Largs.Tests
                 --foo 2 -x one -42 -x two world -x three"
                     .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
-            var (mode, result, tail) =
-                ArgBinder.Bind(help, version, args, commandLine);
-
-            Assert.That(mode, Is.EqualTo(3));
+            var (result, tail) =
+                ArgBinder.Bind(args, commandLine);
 
             Assert.That(result.Verbosity, Is.EqualTo(3));
             Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
@@ -82,18 +74,6 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
-
-            (mode, result, tail) =
-                ArgBinder.Bind(help, version, args,
-                               commandLine.Prepend("-h").ToArray());
-
-            Assert.That(mode, Is.EqualTo(1));
-
-            (mode, result, tail) =
-                ArgBinder.Bind(help, version, args,
-                               commandLine.Prepend("-V").ToArray());
-
-            Assert.That(mode, Is.EqualTo(2));
         }
 
         [Test]
