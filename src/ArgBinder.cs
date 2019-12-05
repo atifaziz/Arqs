@@ -131,7 +131,7 @@ namespace Largs
                             if (i >= 0)
                             {
                                 var spec = specs[i];
-                                if (spec.Info is OptionArgInfo info && info.ArgKind == OptionArgKind.Regular)
+                                if (spec.Info is OptionArgInfo)
                                 {
                                     unreads.Push("-" + ch);
                                     if (j + 1 < arg.Length)
@@ -198,14 +198,15 @@ namespace Largs
                     {
                         reader.Read();
 
-                        var info = (OptionArgInfo)specs[i].Info;
                         var isValueUnbundled = false;
                         if (reader.TryPeek(out var uvr) && ReferenceEquals(uvr, UnbundledValueReference))
                         {
                             isValueUnbundled = true;
                             reader.Read();
                         }
-                        if ((specs[i].IsFlag() || info.IsValueOptional) && !isValueUnbundled)
+
+                        if ((specs[i].IsFlag() || specs[i].Info is OptionArgInfo info && info.IsValueOptional)
+                            && !isValueUnbundled)
                         {
                             accumulators[i].AccumulateDefault();
                         }

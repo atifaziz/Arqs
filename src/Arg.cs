@@ -71,7 +71,7 @@ namespace Largs
     public static class Arg
     {
         public static bool IsFlag(this IArg arg) =>
-            arg.Info is OptionArgInfo info && info.ArgKind == OptionArgKind.Flag;
+            arg.Info is FlagArgInfo;
 
         public static bool IsIntegerOption(this IArg arg) =>
             arg.Info is IntegerOptionArgInfo;
@@ -83,10 +83,20 @@ namespace Largs
             arg.Info is OperandArgInfo;
 
         public static string Name(this IArg arg) =>
-            arg.Info is OptionArgInfo info ? info.Name : null;
+            arg.Info switch
+            {
+                OptionArgInfo info => info.Name,
+                FlagArgInfo info => info.Name,
+                _ => null,
+            };
 
         public static ShortOptionName ShortName(this IArg arg) =>
-            arg.Info is OptionArgInfo info ? info.ShortName : null;
+            arg.Info switch
+            {
+                OptionArgInfo info => info.ShortName,
+                FlagArgInfo info => info.ShortName,
+                _ => null,
+            };
 
         public static string Description(this IArg arg) =>
             arg.Info.Description;
@@ -111,7 +121,7 @@ namespace Largs
                          Func<IAccumulator<T>, T> binder) where TInfo : IArgInfo =>
             new Arg<T, TInfo>(info, accumulatorFactory, binder);
 
-        public static IArg<bool, OptionArgInfo> Flag(string name) =>
+        public static IArg<bool, FlagArgInfo> Flag(string name) =>
             name switch
             {
                 null => throw new ArgumentNullException(nameof(name)),
@@ -120,18 +130,18 @@ namespace Largs
                 _ => Flag(name, null)
             };
 
-        public static IArg<bool, OptionArgInfo> Flag(char shortName) =>
+        public static IArg<bool, FlagArgInfo> Flag(char shortName) =>
             Flag(ShortOptionName.Parse(shortName));
 
-        public static IArg<bool, OptionArgInfo> Flag(ShortOptionName shortName) =>
+        public static IArg<bool, FlagArgInfo> Flag(ShortOptionName shortName) =>
             Flag(null, shortName);
 
-        public static IArg<bool, OptionArgInfo> Flag(string name, ShortOptionName shortName) =>
-            Create(new OptionArgInfo(OptionArgKind.Flag, name, shortName),
+        public static IArg<bool, FlagArgInfo> Flag(string name, ShortOptionName shortName) =>
+            Create(new FlagArgInfo(name, shortName),
                    () => Accumulator.Value(Parser.Boolean("+", "-"), false, true, (_, v) => v),
                    r => r.Count > 0 && r.GetResult());
 
-        public static IArg<int, OptionArgInfo> CountedFlag(string name) =>
+        public static IArg<int, FlagArgInfo> CountedFlag(string name) =>
             name switch
             {
                 null => throw new ArgumentNullException(nameof(name)),
@@ -140,14 +150,14 @@ namespace Largs
                 _ => CountedFlag(name, null)
             };
 
-        public static IArg<int, OptionArgInfo> CountedFlag(char shortName) =>
+        public static IArg<int, FlagArgInfo> CountedFlag(char shortName) =>
             CountedFlag(ShortOptionName.Parse(shortName));
 
-        public static IArg<int, OptionArgInfo> CountedFlag(ShortOptionName shortName) =>
+        public static IArg<int, FlagArgInfo> CountedFlag(ShortOptionName shortName) =>
             CountedFlag(null, shortName);
 
-        public static IArg<int, OptionArgInfo> CountedFlag(string name, ShortOptionName shortName) =>
-            Create(new OptionArgInfo(OptionArgKind.Flag, name, shortName),
+        public static IArg<int, FlagArgInfo> CountedFlag(string name, ShortOptionName shortName) =>
+            Create(new FlagArgInfo(name, shortName),
                    Accumulator.Count, r => r.GetResult());
 
         public static IArg<(string Name, ImmutableArray<string> Args), MacroArgInfo> Macro(string name, Func<string, IEnumerable<string>> expander) =>
@@ -226,6 +236,9 @@ namespace Largs
 
         public static IArg<ImmutableArray<T>, OptionArgInfo> List<T>(this IArg<T, OptionArgInfo> arg) =>
             List<T, OptionArgInfo>(arg);
+
+        public static IArg<ImmutableArray<T>, FlagArgInfo> List<T>(this IArg<T, FlagArgInfo> arg) =>
+            List<T, FlagArgInfo>(arg);
 
         public static IArg<(bool Present, T Value), TInfo>
             FlagPresence<T, TInfo>(this IArg<T, TInfo> arg) where TInfo : IArgInfo =>

@@ -84,40 +84,28 @@ namespace Largs
             new MacroArgInfo(valueName, description);
     }
 
-    public enum OptionArgKind
-    {
-        Regular,
-        Flag,
-        Boolean,
-    }
-
     public class OptionArgInfo : ArgInfo
     {
         public const string DefaultValueName = "VALUE";
 
         public OptionArgInfo(string name, ShortOptionName shortName) :
-            this(OptionArgKind.Regular, name, shortName) {}
+            this(name, shortName, null) {}
 
-        public OptionArgInfo(OptionArgKind argKind, string name, ShortOptionName shortName) :
-            this(argKind, name, shortName, null) {}
+        public OptionArgInfo(string name, ShortOptionName shortName, string valueName) :
+            this(name, shortName, valueName, null) {}
 
-        public OptionArgInfo(OptionArgKind argKind, string name, ShortOptionName shortName, string valueName) :
-            this(argKind, name, shortName, valueName, null) {}
+        public OptionArgInfo(string name, ShortOptionName shortName, string valueName, string description) :
+            this(name, shortName, valueName, false, description) {}
 
-        public OptionArgInfo(OptionArgKind argKind, string name, ShortOptionName shortName, string valueName, string description) :
-            this(argKind, name, shortName, valueName, false, description) {}
-
-        public OptionArgInfo(OptionArgKind argKind, string name, ShortOptionName shortName, string valueName, bool isValueOptional, string description) :
+        public OptionArgInfo(string name, ShortOptionName shortName, string valueName, bool isValueOptional, string description) :
             base(description)
         {
-            ArgKind = argKind;
             Name = name;
             ShortName = shortName;
             IsValueOptional = isValueOptional;
             ValueName = valueName ?? DefaultValueName;
         }
 
-        public OptionArgKind ArgKind { get; }
         public string Name { get; }
         public ShortOptionName ShortName { get; }
         public bool IsValueOptional { get; }
@@ -142,7 +130,38 @@ namespace Largs
             Update(Name, ShortName, IsValueOptional, ValueName, description);
 
         protected virtual OptionArgInfo Update(string name, ShortOptionName shortName, bool isValueOptional, string valueName, string description) =>
-            new OptionArgInfo(ArgKind, name, shortName, valueName, isValueOptional, description);
+            new OptionArgInfo(name, shortName, valueName, isValueOptional, description);
+    }
+
+    public class FlagArgInfo : ArgInfo
+    {
+        public FlagArgInfo(string name, ShortOptionName shortName) :
+            this(name, shortName, null) {}
+
+        public FlagArgInfo(string name, ShortOptionName shortName, string description) :
+            base(description)
+        {
+            Name = name;
+            ShortName = shortName;
+        }
+
+        public string Name { get; }
+        public ShortOptionName ShortName { get; }
+
+        public FlagArgInfo WithName(string value) =>
+            Update(value, ShortName, Description);
+
+        public FlagArgInfo WithShortName(ShortOptionName value) =>
+            Update(Name, value, Description);
+
+        public new FlagArgInfo WithDescription(string value) =>
+            Update(Name, ShortName, value);
+
+        protected override ArgInfo Update(string description) =>
+            Update(Name, ShortName, description);
+
+        protected virtual FlagArgInfo Update(string name, ShortOptionName shortName, string description) =>
+            new FlagArgInfo(name, shortName, description);
     }
 
     public class IntegerOptionArgInfo : ArgInfo
