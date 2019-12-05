@@ -22,7 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		test.sh = test.sh
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Largs.Sample", "eg\Largs.Sample.csproj", "{2DDC7312-9396-4906-A077-C3F754B09944}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arqs.Sample", "eg\Arqs.Sample.csproj", "{2DDC7312-9396-4906-A077-C3F754B09944}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

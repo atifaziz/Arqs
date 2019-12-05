@@ -1,4 +1,4 @@
-namespace Largs.Sample
+namespace Arqs.Sample
 {
     using System;
     using System.Collections.Generic;

@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\src\Largs.csproj" />
+    <ProjectReference Include="..\src\Arqs.csproj" />
   </ItemGroup>
 
 </Project>
