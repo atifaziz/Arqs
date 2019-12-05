@@ -104,20 +104,32 @@ namespace Arqs
         public static string Description(this IArg arg) =>
             arg.Info.Description;
 
-        public static IArg<T, OptionArgInfo> WithName<T>(this IArg<T, OptionArgInfo> arg, string value) =>
+        public static IArg<T, OptionArgInfo> Name<T>(this IArg<T, OptionArgInfo> arg, string value) =>
             arg.WithInfo(arg.Info.WithName(value));
 
-        public static IArg<T, OptionArgInfo> WithShortName<T>(this IArg<T, OptionArgInfo> arg, char value) =>
-            arg.WithShortName(ShortOptionName.Parse(value));
+        public static IArg<T, OptionArgInfo> ShortName<T>(this IArg<T, OptionArgInfo> arg, char value) =>
+            arg.ShortName(ShortOptionName.Parse(value));
 
-        public static IArg<T, OptionArgInfo> WithShortName<T>(this IArg<T, OptionArgInfo> arg, ShortOptionName value) =>
+        public static IArg<T, OptionArgInfo> ShortName<T>(this IArg<T, OptionArgInfo> arg, ShortOptionName value) =>
             arg.WithInfo(arg.Info.WithShortName(value));
 
-        public static IArg<T, OptionArgInfo> WithDescription<T>(this IArg<T, OptionArgInfo> arg, string value) =>
+        public static IArg<T, OptionArgInfo> Description<T>(this IArg<T, OptionArgInfo> arg, string value) =>
             arg.WithInfo(arg.Info.WithDescription(value));
 
-        public static IArg<T, OptionArgInfo> WithIsValueOptional<T>(this IArg<T, OptionArgInfo> arg, bool value) =>
-            arg.WithInfo(arg.Info.WithIsValueOptional(value));
+        public static IArg<T, OptionArgInfo> DefaultValue<T>(this IArg<T, OptionArgInfo> arg) =>
+            arg.WithInfo(arg.Info.WithIsValueOptional(true));
+
+        public static IArg<T, OptionArgInfo> RequireValue<T>(this IArg<T, OptionArgInfo> arg) =>
+            arg.WithInfo(arg.Info.WithIsValueOptional(false));
+
+        public static IArg<T, FlagArgInfo> Name<T>(this IArg<T, FlagArgInfo> arg, string value) =>
+            arg.WithInfo(arg.Info.WithName(value));
+
+        public static IArg<T, FlagArgInfo> ShortName<T>(this IArg<T, FlagArgInfo> arg, char value) =>
+            arg.ShortName(ShortOptionName.Parse(value));
+
+        public static IArg<T, FlagArgInfo> ShortName<T>(this IArg<T, FlagArgInfo> arg, ShortOptionName value) =>
+            arg.WithInfo(arg.Info.WithShortName(value));
 
         public static IArg<T, FlagArgInfo> Negatable<T>(this IArg<T, FlagArgInfo> arg, bool value) =>
             arg.WithInfo(arg.Info.WithIsNegatable(value));

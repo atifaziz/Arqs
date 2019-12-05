@@ -28,12 +28,12 @@ namespace Arqs.Tests
             var args =
                 from h    in Arg.Flag("h")
                 join v    in Arg.Flag("V") on 1 equals 1
-                join vl   in Arg.CountedFlag("verbose", (ShortOptionName)'v') on 1 equals 1
+                join vl   in Arg.CountedFlag("verbose").ShortName('v') on 1 equals 1
                 join foo  in Arg.Option("foo", -1, Parser.Int32()).List() on 1 equals 1
                 join bar  in Arg.Flag("bar")  on 1 equals 1
                 join baz  in Arg.Option("baz", Parser.Int32().Nullable())  on 1 equals 1
                 join qux  in Arg.Option("qux", "?", Parser.String()) on 1 equals 1
-                join opt  in Arg.Option("opt", ShortOptionName.Parse('o'), "?", Parser.String()).WithIsValueOptional(true).List() on 1 equals 1
+                join opt  in Arg.Option("opt", "?", Parser.String()).ShortName('o').DefaultValue().List() on 1 equals 1
                 join xs   in Arg.Option("x", Parser.String()).List() on 1 equals 1
                 join @int in Arg.IntOpt("int") on 1 equals 1
                 join pos1 in Arg.Operand("x", Parser.String()) on 1 equals 1
