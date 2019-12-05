@@ -78,9 +78,6 @@ namespace Largs
         public static bool IsOperand(this IArg arg) =>
             arg.Info is OperandArgInfo;
 
-        public static bool IsLiteral(this IArg arg) =>
-            arg.Info is LiteralArgInfo;
-
         public static string Name(this IArg arg) =>
             arg.Info is OptionArgInfo info ? info.Name : null;
 
@@ -203,15 +200,6 @@ namespace Largs
 
         public static IArg<T, OperandArgInfo> Operand<T>(string name, T @default, IParser<T> parser) =>
             Create(new OperandArgInfo(name), () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default);
-
-        public static IArg<string, LiteralArgInfo> Literal(string value) =>
-            Literal(value, StringComparison.Ordinal);
-
-        public static IArg<string, LiteralArgInfo> Literal(string value, StringComparison comparison)
-        {
-            var parser = Parser.Literal(value, comparison);
-            return Create(new LiteralArgInfo(value), () => Accumulator.Value(parser), r => r.GetResult());
-        }
 
         public static IArg<ImmutableArray<T>, OperandArgInfo> List<T>(this IArg<T, OperandArgInfo> arg) =>
             List<T, OperandArgInfo>(arg);

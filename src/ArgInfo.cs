@@ -61,29 +61,6 @@ namespace Largs
             new OperandArgInfo(valueName, description);
     }
 
-    public class LiteralArgInfo : ArgInfo
-    {
-        public LiteralArgInfo(string text) : this(text, null) { }
-
-        public LiteralArgInfo(string text, string description) :
-            base(description) =>
-            Text = text;
-
-        public string Text { get; }
-
-        public LiteralArgInfo WithText(string value) =>
-            Update(value, Description);
-
-        public new LiteralArgInfo WithDescription(string value) =>
-            Update(Text, value);
-
-        protected override ArgInfo Update(string description) =>
-            Update(Text, description);
-
-        protected virtual LiteralArgInfo Update(string text, string description) =>
-            new LiteralArgInfo(text, description);
-    }
-
     public enum OptionArgKind
     {
         Regular,

@@ -164,28 +164,5 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("c"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("d"));
         }
-
-        [Test]
-        public void Test5()
-        {
-            var args =
-                from foo in Arg.Literal("foo")
-                join bar in Arg.Literal("bar") on 1 equals 1
-                join baz in Arg.Literal("baz") on 1 equals 1
-                select new { Foo = foo, Bar = bar, Baz = baz };
-
-            var commandLine = "foo bar baz".Split();
-            var (result, tail) = args.Bind(commandLine);
-
-            Assert.That(result.Foo, Is.EqualTo("foo"));
-            Assert.That(result.Bar, Is.EqualTo("bar"));
-            Assert.That(result.Baz, Is.EqualTo("baz"));
-            Assert.That(tail, Is.Empty);
-
-            var infos = new Queue<IArg>(args.Inspect());
-            Assert.That(infos.Dequeue().Name, Is.Null);
-            Assert.That(infos.Dequeue().Name, Is.Null);
-            Assert.That(infos.Dequeue().Name, Is.Null);
-        }
     }
 }
