@@ -91,7 +91,7 @@ namespace Largs
             arg.WithInfo(arg.Info.WithName(value));
 
         public static IArg<T, OptionArgInfo> WithShortName<T>(this IArg<T, OptionArgInfo> arg, char value) =>
-            arg.WithShortName(ShortOptionName.From(value));
+            arg.WithShortName(ShortOptionName.Parse(value));
 
         public static IArg<T, OptionArgInfo> WithShortName<T>(this IArg<T, OptionArgInfo> arg, ShortOptionName value) =>
             arg.WithInfo(arg.Info.WithShortName(value));
@@ -112,12 +112,12 @@ namespace Largs
             {
                 null => throw new ArgumentNullException(nameof(name)),
                 var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
-                var s when s.Length == 1 => Flag(ShortOptionName.From(s[0])),
+                var s when s.Length == 1 => Flag(ShortOptionName.Parse(s[0])),
                 _ => Flag(name, null)
             };
 
         public static IArg<bool, OptionArgInfo> Flag(char shortName) =>
-            Flag(ShortOptionName.From(shortName));
+            Flag(ShortOptionName.Parse(shortName));
 
         public static IArg<bool, OptionArgInfo> Flag(ShortOptionName shortName) =>
             Flag(null, shortName);
@@ -132,12 +132,12 @@ namespace Largs
             {
                 null => throw new ArgumentNullException(nameof(name)),
                 var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
-                var s when s.Length == 1 => CountedFlag(ShortOptionName.From(s[0])),
+                var s when s.Length == 1 => CountedFlag(ShortOptionName.Parse(s[0])),
                 _ => CountedFlag(name, null)
             };
 
         public static IArg<int, OptionArgInfo> CountedFlag(char shortName) =>
-            CountedFlag(ShortOptionName.From(shortName));
+            CountedFlag(ShortOptionName.Parse(shortName));
 
         public static IArg<int, OptionArgInfo> CountedFlag(ShortOptionName shortName) =>
             CountedFlag(null, shortName);
@@ -151,12 +151,12 @@ namespace Largs
             {
                 null => throw new ArgumentNullException(nameof(name)),
                 var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
-                var s when s.Length == 1 => Option(ShortOptionName.From(s[0]), @default, parser),
+                var s when s.Length == 1 => Option(ShortOptionName.Parse(s[0]), @default, parser),
                 _ => Option(name, null, @default, parser)
             };
 
         public static IArg<T, OptionArgInfo> Option<T>(char shortName, T @default, IParser<T> parser) =>
-            Option(ShortOptionName.From(shortName), @default, parser);
+            Option(ShortOptionName.Parse(shortName), @default, parser);
 
         public static IArg<T, OptionArgInfo> Option<T>(ShortOptionName shortName, T @default, IParser<T> parser) =>
             Option(null, shortName, @default, parser);
@@ -169,12 +169,12 @@ namespace Largs
             {
                 null => throw new ArgumentNullException(nameof(name)),
                 var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
-                var s when s.Length == 1 => Option(ShortOptionName.From(s[0]), parser),
+                var s when s.Length == 1 => Option(ShortOptionName.Parse(s[0]), parser),
                 _ => Option(name, null, parser)
             };
 
         public static IArg<T, OptionArgInfo> Option<T>(char shortName, IParser<T> parser) =>
-            Option(ShortOptionName.From(shortName), parser);
+            Option(ShortOptionName.Parse(shortName), parser);
 
         public static IArg<T, OptionArgInfo> Option<T>(ShortOptionName shortName, IParser<T> parser) =>
             Option(null, shortName, parser);

@@ -43,8 +43,20 @@ namespace Largs
         static ArgumentOutOfRangeException InvalidNameError(char ch) =>
             new ArgumentOutOfRangeException(nameof(ch), ch, "Short name must be a digit or a lowercase or uppercase ASCII letter.");
 
-        public static ShortOptionName From(char ch) =>
-            IsLetterOrDigit(ch) ? Cache[ch] : throw InvalidNameError(ch);
+        public static ShortOptionName Parse(char ch) =>
+            TryParse(ch, out var name) ? name : throw InvalidNameError(ch);
+
+        public static bool TryParse(char ch, out ShortOptionName value)
+        {
+            if (!IsLetterOrDigit(ch))
+            {
+                value = default;
+                return false;
+            }
+
+            value = Cache[ch];
+            return true;
+        }
 
         ShortOptionName(char ch) =>
             _ld = IsLetterOrDigit(ch)

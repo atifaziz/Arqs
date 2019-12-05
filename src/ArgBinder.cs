@@ -129,7 +129,11 @@ namespace Largs
                         continue;
                     }
 
-                    name = (null, ShortOptionName.From(arg[1]));
+                    var snch = arg[1];
+                    if (!ShortOptionName.TryParse(snch, out var sn))
+                        throw new Exception("Invalid option: " + snch);
+
+                    name = (null, sn);
                 }
 
                 if (name == default)
