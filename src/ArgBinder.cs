@@ -76,15 +76,27 @@ namespace Largs
                 if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
                     var longName = arg.Substring(2);
-                    var equalIndex = longName.IndexOf('=');
-                    if (equalIndex > 0)
+                    char lch;
+                    if (longName.Length > 2)
                     {
-                        reader.Read();
-                        reader.Unread(longName.Substring(equalIndex + 1));
-                        reader.Unread(UnbundledValueReference);
-                        reader.Unread(arg);
-                        longName = longName.Substring(0, equalIndex);
+                        var equalIndex = longName.IndexOf('=');
+                        if (equalIndex > 0)
+                        {
+                            reader.Read();
+                            reader.Unread(longName.Substring(equalIndex + 1));
+                            reader.Unread(UnbundledValueReference);
+                            reader.Unread(arg);
+                            longName = longName.Substring(0, equalIndex);
+                        }
+                        else if ((lch = longName[longName.Length - 1]) == '+' || lch == '-')
+                        {
+                            reader.Read();
+                            reader.Unread(lch.ToString());
+                            reader.Unread(UnbundledValueReference);
+                            reader.Unread(longName = longName.Substring(0, longName.Length - 1));
+                        }
                     }
+
                     name = (longName, null);
                 }
                 else if (arg.Length > 1 && arg[0] == '-')

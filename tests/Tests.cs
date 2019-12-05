@@ -28,7 +28,7 @@ namespace Largs.Tests
             var args =
                 from h    in Arg.Flag("h")
                 join v    in Arg.Flag("V") on 1 equals 1
-                join vl   in Arg.CountedFlag("v") on 1 equals 1
+                join vl   in Arg.CountedFlag("verbose", (ShortOptionName)'v') on 1 equals 1
                 join foo  in Arg.Option("foo", -1, Parser.Int32()).List() on 1 equals 1
                 join bar  in Arg.Flag("bar")  on 1 equals 1
                 join baz  in Arg.Option("baz", Parser.Int32().Nullable())  on 1 equals 1
@@ -61,13 +61,14 @@ namespace Largs.Tests
                 -ofoo -obar -o --opt=baz -vo -vovo
                 @some_macro
                 --foo 2 -x one -42 -x two - world -x three -xfour
-                -f -f -ff -f+ -f- -f-f+ -f+f- -ff- -f+vf- -v-"
+                -f -f -ff -f+ -f- -f-f+ -f+f- -ff- -f+vf-
+                -v- --verbose --verbose+ --verbose-"
                     .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
             var (result, tail) =
                 ArgBinder.Bind(args, commandLine);
 
-            Assert.That(result.Verbosity, Is.EqualTo(6));
+            Assert.That(result.Verbosity, Is.EqualTo(7));
             Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
             Assert.That(result.Bar, Is.True);
             Assert.That(result.Baz, Is.Null);
