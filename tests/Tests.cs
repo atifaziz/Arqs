@@ -33,17 +33,32 @@ namespace Largs.Tests
                 join bar  in Arg.Flag("bar")  on 1 equals 1
                 join baz  in Arg.Option("baz", Parser.Int32().Nullable())  on 1 equals 1
                 join qux  in Arg.Option("qux", "?", Parser.String()) on 1 equals 1
-                join opt  in Arg.Option("opt", ShortOptionName.From('o'), "?", Parser.String()).WithIsValueOptional(true).List() on 1 equals 1
+                join opt  in Arg.Option("opt", ShortOptionName.Parse('o'), "?", Parser.String()).WithIsValueOptional(true).List() on 1 equals 1
                 join xs   in Arg.Option("x", Parser.String()).List() on 1 equals 1
                 join @int in Arg.IntOpt("int") on 1 equals 1
                 join pos1 in Arg.Operand("x", Parser.String()) on 1 equals 1
                 join pos2 in Arg.Operand("x", Parser.String()) on 1 equals 1
-                select new { Verbosity = vl, Foo = foo, Bar = bar, Baz = baz, Qux = qux, Opt = opt, X = string.Join(",", xs), Int = @int, Pos1 = pos1, Pos2 = pos2 };
+                join flag in Arg.Flag("f").List() on 1 equals 1
+                select new
+                {
+                    Verbosity = vl,
+                    Foo = foo,
+                    Bar = bar,
+                    Baz = baz,
+                    Qux = qux,
+                    Opt = opt,
+                    X = string.Join(",", xs),
+                    Int = @int,
+                    Pos1 = pos1,
+                    Pos2 = pos2,
+                    Flag = flag,
+                };
 
             var commandLine = @"
                 1 --bar -v -v -v --foo 4 2 hello
                 -ofoo -obar -o --opt=baz -vo -vovo
-                --foo 2 -x one -42 -x two - world -x three -xfour"
+                --foo 2 -x one -42 -x two - world -x three -xfour
+                -f -f -ff -f+ -f- -f-f+ -f+f- -ff- -f+vf- -v-"
                     .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
             var (result, tail) =
@@ -59,6 +74,7 @@ namespace Largs.Tests
             Assert.That(result.Int, Is.EqualTo(42));
             Assert.That(result.Pos1, Is.EqualTo("1"));
             Assert.That(result.Pos2, Is.EqualTo("2"));
+            Assert.That(result.Flag, Is.EqualTo(new[] { true, true, true, true, true, false, false, true, true, false, true, false, true, false }));
             Assert.That(tail, Is.EqualTo(new[] { "hello", "-", "world" }));
 
             var infos = new Queue<IArg>(args.Inspect());
@@ -74,6 +90,7 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
+            Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("f"));
         }
 
         [Test]

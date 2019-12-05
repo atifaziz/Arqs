@@ -41,6 +41,8 @@ namespace Largs
             Create(bindings => (first.Bind(bindings), second.Bind(bindings)),
                    () => first.Inspect().Concat(second.Inspect()));
 
+        static readonly string UnbundledValueReference = new string('*', 1);
+
         public static (T Result, ImmutableArray<string> Tail)
             Bind<T>(this IArgBinder<T> binder, params string[] args)
         {
@@ -53,7 +55,6 @@ namespace Largs
             var asi = 0;
             var nsi = 0;
             var tail = new List<string>();
-            var isValueUnbundled = false;
 
             using var reader = args.Read();
             while (reader.TryPeek(out var arg))
@@ -67,9 +68,9 @@ namespace Largs
                     {
                         reader.Read();
                         reader.Unread(longName.Substring(equalIndex + 1));
+                        reader.Unread(UnbundledValueReference);
                         reader.Unread(arg);
                         longName = longName.Substring(0, equalIndex);
-                        isValueUnbundled = true;
                     }
                     name = (longName, null);
                 }
@@ -104,18 +105,27 @@ namespace Largs
                             var i = specs.FindIndex(e => e.ShortName() is ShortOptionName sn && sn == ch);
                             if (i >= 0)
                             {
-                                if (specs[i].Info is OptionArgInfo info && info.ArgKind == OptionArgKind.Regular)
+                                var spec = specs[i];
+                                if (spec.Info is OptionArgInfo info && info.ArgKind == OptionArgKind.Regular)
                                 {
                                     unreads.Push("-" + ch);
                                     if (j + 1 < arg.Length)
                                     {
+                                        unreads.Push(UnbundledValueReference);
                                         unreads.Push(arg.Substring(j + 1));
-                                        isValueUnbundled = true;
                                     }
                                     break;
                                 }
 
                                 unreads.Push("-" + ch);
+
+                                char nch;
+                                if (spec.IsFlag() && j + 1 < arg.Length && ((nch = arg[j + 1]) == '+' || nch == '-'))
+                                {
+                                    unreads.Push(UnbundledValueReference);
+                                    unreads.Push(nch.ToString());
+                                    j++;
+                                }
                             }
                             else
                             {
@@ -164,7 +174,13 @@ namespace Largs
                         reader.Read();
 
                         var info = (OptionArgInfo)specs[i].Info;
-                        if (specs[i].IsFlag() || info.IsValueOptional && !isValueUnbundled)
+                        var isValueUnbundled = false;
+                        if (reader.TryPeek(out var uvr) && ReferenceEquals(uvr, UnbundledValueReference))
+                        {
+                            isValueUnbundled = true;
+                            reader.Read();
+                        }
+                        if ((specs[i].IsFlag() || info.IsValueOptional) && !isValueUnbundled)
                         {
                             accumulators[i].AccumulateDefault();
                         }
@@ -173,9 +189,6 @@ namespace Largs
                             var (ln, sn) = name;
                             throw new Exception("Invalid value for option: " + (ln ?? sn.ToString()));
                         }
-
-                        if (info.ArgKind == OptionArgKind.Regular)
-                            isValueUnbundled = false;
                     }
                     else
                     {

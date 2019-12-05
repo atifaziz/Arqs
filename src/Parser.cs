@@ -185,6 +185,9 @@ namespace Largs
         public static IParser<DateTime> DateTime(string format) => Parsers.DateTime.WithOptions(Parsers.DateTime.Options.WithFormats(ImmutableArray.Create(format)));
         public static IParser<string> String() => Parsers.Id;
 
+        internal static readonly IParser<bool> BooleanPlusMinus =
+            Boolean("+", "-", StringComparison.Ordinal);
+
         public static IParser<bool> Boolean(string trueString, string falseString) =>
             Boolean(trueString, falseString, StringComparison.Ordinal);
 

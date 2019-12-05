@@ -37,7 +37,7 @@ namespace Largs
             Value(parser, default, (_, v) => v);
 
         static readonly IAccumulator<int> Counter =
-            Create(0, delegate { throw new InvalidOperationException(); }, count => count + 1, count => count);
+            Value(Parser.BooleanPlusMinus, 0, true, (count, flag) => flag ? count + 1 : count - 1);
 
         public static IAccumulator<int> Count() => Counter;
 
@@ -46,7 +46,7 @@ namespace Largs
                                      ? ParseResult.Success(folder(acc, v)) : default,
                          v => v);
 
-        public static IAccumulator<T> Value<T>(IParser<T> parser, T seed, T @default, Func<T, T, T> folder) =>
+        public static IAccumulator<S> Value<T, S>(IParser<T> parser, S seed, T @default, Func<S, T, S> folder) =>
             Create(seed, (acc, arg) => arg.TryRead(out var s) && parser.Parse(s) is (true, var v)
                                      ? ParseResult.Success(folder(acc, v)) : default,
                          s => folder(s, @default),
