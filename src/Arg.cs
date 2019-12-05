@@ -39,9 +39,9 @@ namespace Largs
         readonly Func<IAccumulator<T>> _accumulatorFactory;
         readonly Func<IAccumulator<T>, T> _binder;
 
-        public Arg(TInfo data, Func<IAccumulator<T>> accumulatorFactory, Func<IAccumulator<T>, T> binder)
+        public Arg(TInfo info, Func<IAccumulator<T>> accumulatorFactory, Func<IAccumulator<T>, T> binder)
         {
-            Info = data;
+            Info = info;
             _accumulatorFactory = accumulatorFactory ?? throw new ArgumentNullException(nameof(accumulatorFactory));
             _binder = binder ?? throw new ArgumentNullException(nameof(binder));
         }
@@ -49,11 +49,11 @@ namespace Largs
         public TInfo Info { get; }
         IArgInfo IArg.Info => Info;
 
-        public Arg<T, TInfo> WithData(TInfo value) =>
+        public Arg<T, TInfo> WithInfo(TInfo value) =>
             new Arg<T, TInfo>(value, _accumulatorFactory, _binder);
 
-        IArg<T, TInfo> IArg<T, TInfo>.WithInfo(TInfo value) => WithData(value);
-        IArg IArg.WithInfo(IArgInfo value) => WithData((TInfo)value);
+        IArg<T, TInfo> IArg<T, TInfo>.WithInfo(TInfo value) => WithInfo(value);
+        IArg IArg.WithInfo(IArgInfo value) => WithInfo((TInfo)value);
 
         IAccumulator IArg.CreateAccumulator() => CreateAccumulator();
 
@@ -70,7 +70,7 @@ namespace Largs
     public static class Arg
     {
         public static bool IsFlag(this IArg arg) =>
-            arg.Info is OptionArgInfo data && data.ArgKind == OptionArgKind.Flag;
+            arg.Info is OptionArgInfo info && info.ArgKind == OptionArgKind.Flag;
 
         public static bool IsIntegerOption(this IArg arg) =>
             arg.Info is IntegerOptionArgInfo;
@@ -82,10 +82,10 @@ namespace Largs
             arg.Info is LiteralArgInfo;
 
         public static string Name(this IArg arg) =>
-            arg.Info is OptionArgInfo data ? data.Name : null;
+            arg.Info is OptionArgInfo info ? info.Name : null;
 
         public static ShortOptionName ShortName(this IArg arg) =>
-            arg.Info is OptionArgInfo data ? data.ShortName : null;
+            arg.Info is OptionArgInfo info ? info.ShortName : null;
 
         public static string Description(this IArg arg) =>
             arg.Info.Description;
@@ -106,9 +106,9 @@ namespace Largs
             arg.WithInfo(arg.Info.WithIsValueOptional(value));
 
         static IArg<T, TInfo>
-            Create<T, TInfo>(TInfo data, Func<IAccumulator<T>> accumulatorFactory,
+            Create<T, TInfo>(TInfo info, Func<IAccumulator<T>> accumulatorFactory,
                          Func<IAccumulator<T>, T> binder) where TInfo : IArgInfo =>
-            new Arg<T, TInfo>(data, accumulatorFactory, binder);
+            new Arg<T, TInfo>(info, accumulatorFactory, binder);
 
         public static IArg<bool, OptionArgInfo> Flag(string name) =>
             name switch
