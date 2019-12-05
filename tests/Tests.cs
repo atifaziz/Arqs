@@ -18,8 +18,6 @@ namespace Largs.Tests
 {
     using System;
     using System.Collections.Generic;
-    using System.Collections.Immutable;
-    using System.Linq;
     using NUnit.Framework;
 
     public class Tests
