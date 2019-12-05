@@ -73,6 +73,9 @@ namespace Largs
         public static bool IsFlag(this IArg arg) =>
             arg.Info is FlagArgInfo;
 
+        public static bool IsNegtableFlag(this IArg arg) =>
+            arg.Info is FlagArgInfo info && info.IsNegatable;
+
         public static bool IsIntegerOption(this IArg arg) =>
             arg.Info is IntegerOptionArgInfo;
 
@@ -115,6 +118,9 @@ namespace Largs
 
         public static IArg<T, OptionArgInfo> WithIsValueOptional<T>(this IArg<T, OptionArgInfo> arg, bool value) =>
             arg.WithInfo(arg.Info.WithIsValueOptional(value));
+
+        public static IArg<T, FlagArgInfo> Negatable<T>(this IArg<T, FlagArgInfo> arg, bool value) =>
+            arg.WithInfo(arg.Info.WithIsNegatable(value));
 
         static IArg<T, TInfo>
             Create<T, TInfo>(TInfo info, Func<IAccumulator<T>> accumulatorFactory,

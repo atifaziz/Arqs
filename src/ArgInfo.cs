@@ -136,32 +136,37 @@ namespace Largs
     public class FlagArgInfo : ArgInfo
     {
         public FlagArgInfo(string name, ShortOptionName shortName) :
-            this(name, shortName, null) {}
+            this(name, shortName, false, null) {}
 
-        public FlagArgInfo(string name, ShortOptionName shortName, string description) :
+        public FlagArgInfo(string name, ShortOptionName shortName, bool isNegatable, string description) :
             base(description)
         {
             Name = name;
             ShortName = shortName;
+            IsNegatable = isNegatable;
         }
 
         public string Name { get; }
         public ShortOptionName ShortName { get; }
+        public bool IsNegatable { get; }
 
         public FlagArgInfo WithName(string value) =>
-            Update(value, ShortName, Description);
+            Update(value, ShortName, IsNegatable, Description);
 
         public FlagArgInfo WithShortName(ShortOptionName value) =>
-            Update(Name, value, Description);
+            Update(Name, value, IsNegatable, Description);
+
+        public FlagArgInfo WithIsNegatable(bool value) =>
+            Update(Name, ShortName, value, Description);
 
         public new FlagArgInfo WithDescription(string value) =>
-            Update(Name, ShortName, value);
+            Update(Name, ShortName, IsNegatable, value);
 
         protected override ArgInfo Update(string description) =>
-            Update(Name, ShortName, description);
+            Update(Name, ShortName, IsNegatable, description);
 
-        protected virtual FlagArgInfo Update(string name, ShortOptionName shortName, string description) =>
-            new FlagArgInfo(name, shortName, description);
+        protected virtual FlagArgInfo Update(string name, ShortOptionName shortName, bool isNegatable, string description) =>
+            new FlagArgInfo(name, shortName, isNegatable, description);
     }
 
     public class IntegerOptionArgInfo : ArgInfo

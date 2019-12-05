@@ -194,6 +194,27 @@ namespace Largs
                         (null, ShortOptionName sn) => e.ShortName() == sn,
                         _ => false,
                     });
+
+                    if (i < 0 && name is (string tln, null)
+                              && tln.Length > 3
+                              && tln.StartsWith("no-", StringComparison.Ordinal))
+                    {
+                        var rln = tln.Substring(3);
+                        i = specs.FindIndex(e => e.IsNegtableFlag() && e.Name() == rln);
+                        if (i >= 0)
+                        {
+                            var lch = arg[arg.Length - 1];
+
+                            if (lch == '+' || lch == '-')
+                                throw new Exception("Invalid flag: " + arg);
+
+                            reader.Read();
+                            reader.Unread("-");
+                            reader.Unread(UnbundledValueReference);
+                            reader.Unread(arg);
+                        }
+                    }
+
                     if (i >= 0)
                     {
                         reader.Read();

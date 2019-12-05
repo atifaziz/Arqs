@@ -40,6 +40,7 @@ namespace Largs.Tests
                 join pos2 in Arg.Operand("x", Parser.String()) on 1 equals 1
                 join flag in Arg.Flag("f").List() on 1 equals 1
                 join m    in Arg.Macro("macro", s => "-v there".Split()) on 1 equals 1
+                join page in Arg.Flag("page", (ShortOptionName)'p').Negatable(true).List() on 1 equals 1
                 select new
                 {
                     Verbosity = vl,
@@ -54,6 +55,7 @@ namespace Largs.Tests
                     Pos2 = pos2,
                     Flag = flag,
                     Macro = m,
+                    Page = page,
                 };
 
             var commandLine = @"
@@ -62,7 +64,9 @@ namespace Largs.Tests
                 @some_macro
                 --foo 2 -x one -42 -x two - world -x three -xfour
                 -f -f -ff -f+ -f- -f-f+ -f+f- -ff- -f+vf-
-                -v- --verbose --verbose+ --verbose-"
+                -v- --verbose --verbose+ --verbose-
+                -p --page -p+ -p- --no-page
+                "
                     .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
             var (result, tail) =
@@ -82,6 +86,7 @@ namespace Largs.Tests
             Assert.That(result.Macro.Name, Is.EqualTo("some_macro"));
             Assert.That(result.Macro.Args, Is.EqualTo(new[] { "-v", "there" }));
             Assert.That(tail, Is.EqualTo(new[] { "hello", "there", "-", "world" }));
+            Assert.That(result.Page, Is.EqualTo(new[] { true, true, true, false, false }));
 
             var infos = new Queue<IArg>(args.Inspect());
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("h"));
