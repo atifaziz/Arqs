@@ -160,7 +160,7 @@ namespace Largs
                         reader.Read();
 
                         var info = (OptionArgInfo)specs[i].Info;
-                        if (info.IsValueOptional && !isValueUnbundled)
+                        if (specs[i].IsFlag() || info.IsValueOptional && !isValueUnbundled)
                         {
                             accumulators[i].AccumulateDefault();
                         }
