@@ -18,6 +18,8 @@ namespace Largs.Tests
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.Immutable;
+    using System.Linq;
     using NUnit.Framework;
 
     public class Tests
@@ -39,6 +41,7 @@ namespace Largs.Tests
                 join pos1 in Arg.Operand("x", Parser.String()) on 1 equals 1
                 join pos2 in Arg.Operand("x", Parser.String()) on 1 equals 1
                 join flag in Arg.Flag("f").List() on 1 equals 1
+                join m    in Arg.Macro("macro", s => "-v there".Split()) on 1 equals 1
                 select new
                 {
                     Verbosity = vl,
@@ -52,11 +55,13 @@ namespace Largs.Tests
                     Pos1 = pos1,
                     Pos2 = pos2,
                     Flag = flag,
+                    Macro = m,
                 };
 
             var commandLine = @"
                 1 --bar -v -v -v --foo 4 2 hello
                 -ofoo -obar -o --opt=baz -vo -vovo
+                @some_macro
                 --foo 2 -x one -42 -x two - world -x three -xfour
                 -f -f -ff -f+ -f- -f-f+ -f+f- -ff- -f+vf- -v-"
                     .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
@@ -64,7 +69,7 @@ namespace Largs.Tests
             var (result, tail) =
                 ArgBinder.Bind(args, commandLine);
 
-            Assert.That(result.Verbosity, Is.EqualTo(5));
+            Assert.That(result.Verbosity, Is.EqualTo(6));
             Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
             Assert.That(result.Bar, Is.True);
             Assert.That(result.Baz, Is.Null);
@@ -75,7 +80,9 @@ namespace Largs.Tests
             Assert.That(result.Pos1, Is.EqualTo("1"));
             Assert.That(result.Pos2, Is.EqualTo("2"));
             Assert.That(result.Flag, Is.EqualTo(new[] { true, true, true, true, true, false, false, true, true, false, true, false, true, false }));
-            Assert.That(tail, Is.EqualTo(new[] { "hello", "-", "world" }));
+            Assert.That(result.Macro.Name, Is.EqualTo("some_macro"));
+            Assert.That(result.Macro.Args, Is.EqualTo(new[] { "-v", "there" }));
+            Assert.That(tail, Is.EqualTo(new[] { "hello", "there", "-", "world" }));
 
             var infos = new Queue<IArg>(args.Inspect());
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("h"));
@@ -91,6 +98,7 @@ namespace Largs.Tests
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("f"));
+            Assert.That(((MacroArgInfo)infos.Dequeue().Info).ValueName, Is.EqualTo("macro"));
         }
 
         [Test]

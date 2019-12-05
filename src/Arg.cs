@@ -19,6 +19,7 @@ namespace Largs
     using System;
     using System.Collections.Generic;
     using System.Collections.Immutable;
+    using System.Linq;
 
     public interface IArg : IArgBinder
     {
@@ -74,6 +75,9 @@ namespace Largs
 
         public static bool IsIntegerOption(this IArg arg) =>
             arg.Info is IntegerOptionArgInfo;
+
+        public static bool IsMacro(this IArg arg) =>
+            arg.Info is MacroArgInfo;
 
         public static bool IsOperand(this IArg arg) =>
             arg.Info is OperandArgInfo;
@@ -145,6 +149,23 @@ namespace Largs
         public static IArg<int, OptionArgInfo> CountedFlag(string name, ShortOptionName shortName) =>
             Create(new OptionArgInfo(OptionArgKind.Flag, name, shortName),
                    Accumulator.Count, r => r.GetResult());
+
+        public static IArg<(string Name, ImmutableArray<string> Args), MacroArgInfo> Macro(string name, Func<string, IEnumerable<string>> expander) =>
+            Create(new MacroArgInfo(name, null),
+                   () =>
+                       Accumulator.Create(default((string, ImmutableArray<string>)),
+                           (_, r) =>
+                           {
+                               if (!r.TryRead(out var s))
+                                   return default;
+                               var args = expander(s).ToImmutableArray();
+                               foreach (var arg in args.Reverse())
+                                   r.Unread(arg);
+                               return ParseResult.Success((s, args));
+                           },
+                           delegate { throw new InvalidOperationException(); },
+                           s => s),
+                   r => r.Count > 0 ? r.GetResult() : default);
 
         public static IArg<T, OptionArgInfo> Option<T>(string name, T @default, IParser<T> parser) =>
             name switch

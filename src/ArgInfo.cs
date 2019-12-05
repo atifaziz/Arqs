@@ -61,6 +61,29 @@ namespace Largs
             new OperandArgInfo(valueName, description);
     }
 
+    public class MacroArgInfo : ArgInfo
+    {
+        public MacroArgInfo(string valueName) : this(valueName, null) { }
+
+        public MacroArgInfo(string valueName, string description) :
+            base(description) =>
+            ValueName = valueName;
+
+        public string ValueName { get; }
+
+        public MacroArgInfo WithValueName(string value) =>
+            Update(value, Description);
+
+        public new MacroArgInfo WithDescription(string value) =>
+            Update(ValueName, value);
+
+        protected override ArgInfo Update(string description) =>
+            Update(ValueName, description);
+
+        protected virtual MacroArgInfo Update(string valueName, string description) =>
+            new MacroArgInfo(valueName, description);
+    }
+
     public enum OptionArgKind
     {
         Regular,

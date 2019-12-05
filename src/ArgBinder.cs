@@ -60,6 +60,19 @@ namespace Largs
             while (reader.TryPeek(out var arg))
             {
                 (string, ShortOptionName) name = default;
+
+                if (arg.Length > 1 && arg[0] == '@')
+                {
+                    var i = specs.FindIndex(e => e.IsMacro());
+                    if (i >= 0)
+                    {
+                        reader.Unread(reader.Read().Substring(1));
+                        if (!accumulators[i].Accumulate(reader))
+                            throw new Exception("Invalid macro: " + arg);
+                        continue;
+                    }
+                }
+
                 if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
                     var longName = arg.Substring(2);
