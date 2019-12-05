@@ -104,7 +104,7 @@ namespace Largs
                             var i = specs.FindIndex(e => e.ShortName() is ShortOptionName sn && sn == ch);
                             if (i >= 0)
                             {
-                                if (specs[i].Info is OptionArgInfo info && info.ArgKind == OptionArgKind.Standard)
+                                if (specs[i].Info is OptionArgInfo info && info.ArgKind == OptionArgKind.Regular)
                                 {
                                     unreads.Push("-" + ch);
                                     if (j + 1 < arg.Length)
@@ -170,7 +170,7 @@ namespace Largs
                             throw new Exception("Invalid value for option: " + (ln ?? sn.ToString()));
                         }
 
-                        if (info.ArgKind == OptionArgKind.Standard)
+                        if (info.ArgKind == OptionArgKind.Regular)
                             isValueUnbundled = false;
                     }
                     else

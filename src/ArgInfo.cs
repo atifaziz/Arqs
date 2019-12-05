@@ -86,7 +86,7 @@ namespace Largs
 
     public enum OptionArgKind
     {
-        Standard,
+        Regular,
         Flag,
         Boolean,
     }
@@ -96,7 +96,7 @@ namespace Largs
         public const string DefaultValueName = "VALUE";
 
         public OptionArgInfo(string name, ShortOptionName shortName) :
-            this(OptionArgKind.Standard, name, shortName) {}
+            this(OptionArgKind.Regular, name, shortName) {}
 
         public OptionArgInfo(OptionArgKind argKind, string name, ShortOptionName shortName) :
             this(argKind, name, shortName, null) {}
