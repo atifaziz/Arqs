@@ -14,7 +14,7 @@
 //
 #endregion
 
-namespace Largs.Tests
+namespace Arqs.Tests
 {
     using System;
     using System.Collections.Generic;

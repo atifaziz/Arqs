@@ -14,7 +14,7 @@
 //
 #endregion
 
-namespace Largs
+namespace Arqs
 {
     using System;
     using System.Collections;

@@ -14,7 +14,7 @@
 //
 #endregion
 
-namespace Largs
+namespace Arqs
 {
     public interface IArgInfo
     {

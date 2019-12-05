@@ -1,4 +1,4 @@
-namespace Largs.Tests
+namespace Arqs.Tests
 {
     using System.Collections.Generic;
     using System.Linq;

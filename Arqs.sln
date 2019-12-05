@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29318.209
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Largs", "src\Largs.csproj", "{4ADD217B-A3E6-4A13-A130-5A3C9591F8D5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arqs", "src\Arqs.csproj", "{4ADD217B-A3E6-4A13-A130-5A3C9591F8D5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Largs.Tests", "tests\Largs.Tests.csproj", "{9DC90058-ED8C-4B95-9971-EAF19F84A298}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Arqs.Tests", "tests\Arqs.Tests.csproj", "{9DC90058-ED8C-4B95-9971-EAF19F84A298}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E9A9EB72-C1DA-47C4-8C87-C4CE0830B37F}"
 	ProjectSection(SolutionItems) = preProject
