@@ -311,6 +311,6 @@ namespace Arqs
                                return ParseResult.Success(array.ToImmutable());
                            },
                            r => r),
-                   r => r.GetResult());
+                   r => r.Count > 0 ? r.GetResult() : ImmutableArray<T>.Empty);
     }
 }
