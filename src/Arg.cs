@@ -293,8 +293,7 @@ namespace Arqs
                            a => a.ToImmutable()),
                        r => r.Count > 0 ? r.GetResult() : ImmutableArray<T>.Empty);
 
-        public static IArg<ImmutableArray<T>, TInfo> Tail<T, TInfo>(this IArg<T, TInfo> arg)
-            where TInfo : IArgInfo =>
+        public static IArg<ImmutableArray<T>, OperandArgInfo> Tail<T>(this IArg<T, OperandArgInfo> arg) =>
             Create(arg.Info,
                    () =>
                        Accumulator.Create(ImmutableArray<T>.Empty,
