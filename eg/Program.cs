@@ -2,13 +2,33 @@ namespace Arqs.Sample
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.Immutable;
     using System.IO;
     using System.Linq;
     using System.Text;
 
+    enum CommandAction { Run, Help }
+
     static class Program
     {
-        static void Main(string[] args)
+        public static int Run<T>(
+            IArgBinder<T> binder,
+            Func<T, CommandAction> f,
+            Func<T, ImmutableArray<string>, int> runner,
+            params string[] args)
+        {
+            var (result, tail) = binder.Bind(args);
+            switch (f(result))
+            {
+                case CommandAction.Help:
+                    Describe(binder, Console.Out);
+                    return 0;
+                default:
+                    return runner(result, tail);
+            }
+        }
+
+        static int Main(string[] args)
         {
             var q =
                 from help in Arg.Flag("help").ShortName('h')/*.WithOtherName("?").Break()*/
@@ -29,14 +49,14 @@ namespace Arqs.Sample
                     Str = str,
                 };
 
-            var (e, tail) =
-                q.Bind(args);
-
-            Console.WriteLine(e);
-            Console.WriteLine(string.Join("; ", tail));
-
-            if (e.Help)
-                Describe(q, Console.Out);
+            return
+                Run(q, e => e.Help ? CommandAction.Help : CommandAction.Run, args: args, runner:
+                (e, tail) =>
+                {
+                    Console.WriteLine(e);
+                    Console.WriteLine(string.Join("; ", tail));
+                    return 0;
+                });
         }
 
         static void Describe<T>(IArgBinder<T> binder, TextWriter writer) =>
