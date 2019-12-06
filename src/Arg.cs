@@ -101,6 +101,16 @@ namespace Arqs
                 _ => null,
             };
 
+        public static string ValueName(this IArg arg) =>
+            arg.Info switch
+            {
+                OptionArgInfo info => info.ValueName,
+                IntegerOptionArgInfo info => info.ValueName,
+                OperandArgInfo info => info.ValueName,
+                MacroArgInfo info => info.ValueName,
+                _ => null,
+            };
+
         public static string Description(this IArg arg) =>
             arg.Info.Description;
 
@@ -130,6 +140,18 @@ namespace Arqs
 
         public static IArg<T, FlagArgInfo> ShortName<T>(this IArg<T, FlagArgInfo> arg, ShortOptionName value) =>
             arg.WithInfo(arg.Info.WithShortName(value));
+
+        public static IArg<T, OptionArgInfo> ValueName<T>(this IArg<T, OptionArgInfo> arg, string value) =>
+            arg.WithInfo(arg.Info.WithValueName(value));
+
+        public static IArg<T, IntegerOptionArgInfo> ValueName<T>(this IArg<T, IntegerOptionArgInfo> arg, string value) =>
+            arg.WithInfo(arg.Info.WithValueName(value));
+
+        public static IArg<T, OperandArgInfo> ValueName<T>(this IArg<T, OperandArgInfo> arg, string value) =>
+            arg.WithInfo(arg.Info.WithValueName(value));
+
+        public static IArg<T, MacroArgInfo> ValueName<T>(this IArg<T, MacroArgInfo> arg, string value) =>
+            arg.WithInfo(arg.Info.WithValueName(value));
 
         public static IArg<T, FlagArgInfo> Negatable<T>(this IArg<T, FlagArgInfo> arg, bool value) =>
             arg.WithInfo(arg.Info.WithIsNegatable(value));
