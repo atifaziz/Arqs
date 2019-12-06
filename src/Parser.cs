@@ -185,6 +185,30 @@ namespace Arqs
         public static IParser<DateTime> DateTime(string format) => Parsers.DateTime.WithOptions(Parsers.DateTime.Options.WithFormats(ImmutableArray.Create(format)));
         public static IParser<string> String() => Parsers.Id;
 
+        public static IParser<string> Choose(params string[] choices) =>
+            String().Choose(StringComparer.Ordinal, choices);
+
+        public static IParser<string> Choose(StringComparison comparison, params string[] choices) =>
+            String().Choose(comparison switch
+                            {
+                                StringComparison.CurrentCulture             => StringComparer.CurrentCulture,
+                                StringComparison.CurrentCultureIgnoreCase   => StringComparer.CurrentCultureIgnoreCase,
+                                StringComparison.InvariantCulture           => StringComparer.InvariantCulture,
+                                StringComparison.InvariantCultureIgnoreCase => StringComparer.InvariantCultureIgnoreCase,
+                                StringComparison.Ordinal                    => StringComparer.Ordinal,
+                                StringComparison.OrdinalIgnoreCase          => StringComparer.OrdinalIgnoreCase,
+                                _ => throw new ArgumentOutOfRangeException(nameof(comparison), comparison, null),
+                            },
+                            choices);
+
+        public static IParser<T> Choose<T>(this IParser<T> parser, params T[] choices) =>
+            parser.Choose(EqualityComparer<T>.Default, choices);
+
+        public static IParser<T> Choose<T>(this IParser<T> parser, IEqualityComparer<T> comparer, params T[] choices) =>
+            from v in parser
+            where choices.Contains(v, comparer)
+            select v;
+
         internal static readonly IParser<bool> BooleanPlusMinus =
             Boolean("+", "-", StringComparison.Ordinal);
 
