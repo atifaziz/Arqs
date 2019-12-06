@@ -17,6 +17,7 @@
 namespace Arqs
 {
     using System;
+    using System.Linq;
 
     public sealed class OptionNames
     {
@@ -48,6 +49,17 @@ namespace Arqs
         public ShortOptionName ShortName { get; }
         public string LongName { get; }
         public string AbbreviatedName { get; }
+
+        public override string ToString() =>
+            string.Join(", ",
+                from n in new[]
+                {
+                    String.ConcatAll("-", ShortName?.ToString()),
+                    String.ConcatAll("--", AbbreviatedName),
+                    String.ConcatAll("--", LongName),
+                }
+                where n != null
+                select n);
 
         public int Count
             => (ShortName       != null ? 1 : 0)
