@@ -104,6 +104,9 @@ namespace Arqs
         public static string Description(this IArg arg) =>
             arg.Info.Description;
 
+        public static T Description<T>(this T arg, string value) where T : IArg =>
+            (T)arg.WithInfo(arg.Info.WithDescription(value));
+
         public static IArg<T, OptionArgInfo> Name<T>(this IArg<T, OptionArgInfo> arg, string value) =>
             arg.WithInfo(arg.Info.WithName(value));
 
@@ -112,9 +115,6 @@ namespace Arqs
 
         public static IArg<T, OptionArgInfo> ShortName<T>(this IArg<T, OptionArgInfo> arg, ShortOptionName value) =>
             arg.WithInfo(arg.Info.WithShortName(value));
-
-        public static IArg<T, OptionArgInfo> Description<T>(this IArg<T, OptionArgInfo> arg, string value) =>
-            arg.WithInfo(arg.Info.WithDescription(value));
 
         public static IArg<T, OptionArgInfo> DefaultValue<T>(this IArg<T, OptionArgInfo> arg) =>
             arg.WithInfo(arg.Info.WithIsValueOptional(true));
