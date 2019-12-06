@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <IsPackable>false</IsPackable>
-    <RootNamespace>Largs.Tests</RootNamespace>
+    <RootNamespace>Arqs.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
