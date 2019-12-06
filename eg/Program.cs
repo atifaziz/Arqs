@@ -9,13 +9,34 @@ namespace Arqs.Sample
 
     enum CommandAction { Run, Help }
 
+    sealed class Command<T>
+    {
+        public Command(
+            IArgBinder<T> binder,
+            Func<T, CommandAction> f,
+            string[] args,
+            Func<T, ImmutableArray<string>, int> runner)
+        {
+
+        }
+    }
+
+    static class Command
+    {
+        public static Command<T> Create<T>(IArgBinder<T> binder,
+            Func<T, CommandAction> f,
+            string[] args,
+            Func<T, ImmutableArray<string>, int> runner) =>
+            new Command<T>(binder, f, args, runner);
+    }
+
     static class Program
     {
         public static int Run<T>(
             IArgBinder<T> binder,
             Func<T, CommandAction> f,
-            Func<T, ImmutableArray<string>, int> runner,
-            params string[] args)
+            string[] args,
+            Func<T, ImmutableArray<string>, int> runner)
         {
             var (result, tail) = binder.Bind(args);
             switch (f(result))
@@ -28,36 +49,69 @@ namespace Arqs.Sample
             }
         }
 
-        static int Main(string[] args)
+        public static int Run(
+            IArgBinder<(CommandAction, Func<ImmutableArray<string>, int>)> binder,
+            string[] args)
         {
-            var q =
-                from help in Arg.Flag("help").ShortName('h')/*.WithOtherName("?").Break()*/
+            var ((action, f), tail) = binder.Bind(args);
+            switch (action)
+            {
+                case CommandAction.Help:
+                    Describe(binder, Console.Out);
+                    return 0;
+                default:
+                    return f(tail);
+            }
+        }
+
+        static (CommandAction, Func<ImmutableArray<string>, int>) Foo(CommandAction a, Func<ImmutableArray<string>, int> b) =>
+            (a, b);
+
+        static int Main(string[] args) =>
+            Run(from help in Arg.Flag("help").ShortName('h')/*.WithOtherName("?").Break()*/
                 join num in Arg.Option("num", 123, Parser.Int32())
-                    .ShortName('n')
-                    .Description("an integer.")
-                    .Description("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
-                    on 1 equals 1
-                join str in Arg.Operand("string", "str", Parser.String()).Description("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
-                    on 1 equals 1
-                join force in Arg.Flag("force")
-                    on 1 equals 1
+                        .ShortName('n')
+                        .Description("an integer.")
+                        .Description("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.") on 1 equals 1
+                join str in Arg.Operand("string", "str", Parser.String()).Description("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.") on 1 equals 1
+                join force in Arg.Flag("force") on 1 equals 1
+                select Foo(help ? CommandAction.Help : CommandAction.Run, args =>
+                {
+                    Console.WriteLine(new
+                    {
+                        Num = num,
+                        Force = force,
+                        Str = str,
+                        Tail = $"[{string.Join("; ", args)}]",
+                    });
+                    return 0;
+                }),
+                args);
+
+        static int Main1(string[] args) =>
+            Run(from help in Arg.Flag("help").ShortName('h')/*.WithOtherName("?").Break()*/
+                join num in Arg.Option("num", 123, Parser.Int32())
+                        .ShortName('n')
+                        .Description("an integer.")
+                        .Description("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.") on 1 equals 1
+                join str in Arg.Operand("string", "str", Parser.String()).Description("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.") on 1 equals 1
+                join force in Arg.Flag("force") on 1 equals 1
+                join tail in Arg.Operand("force", Parser.String()).Tail() on 1 equals 1
                 select new
                 {
                     Help = help,
                     Num = num,
                     Force = force,
                     Str = str,
-                };
-
-            return
-                Run(q, e => e.Help ? CommandAction.Help : CommandAction.Run, args: args, runner:
-                (e, tail) =>
+                    Tail = $"[{string.Join("; ", tail)}]",
+                },
+                e => e.Help ? CommandAction.Help : CommandAction.Run,
+                args,
+                (e, _) =>
                 {
                     Console.WriteLine(e);
-                    Console.WriteLine(string.Join("; ", tail));
                     return 0;
                 });
-        }
 
         static void Describe<T>(IArgBinder<T> binder, TextWriter writer) =>
             Describe(binder.Inspect(), writer);
