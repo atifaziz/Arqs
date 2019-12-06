@@ -10,37 +10,32 @@ namespace Arqs.Sample
     {
         static void Main(string[] args)
         {
-            var helpOption =
-                Arg.Flag("help").WithShortName('h')/*.WithOtherName("?").Break()*/;
-
             var q =
-                from _ in helpOption
+                from help in Arg.Flag("help").ShortName('h')/*.WithOtherName("?").Break()*/
                 join num in Arg.Option("num", 123, Parser.Int32())
-                    .WithShortName('n')
-                    .WithDescription("an integer.")
-                    .WithDescription("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
+                    .ShortName('n')
+                    .Description("an integer.")
+                    .Description("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
                     on 1 equals 1
-                join str in Arg.Operand("string", "str", Parser.String()).WithDescription("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
+                join str in Arg.Operand("string", "str", Parser.String()).Description("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.")
                     on 1 equals 1
                 join force in Arg.Flag("force")
                     on 1 equals 1
                 select new
                 {
+                    Help = help,
                     Num = num,
                     Force = force,
                     Str = str,
                 };
 
-            var (help, options, tail) =
-                ArgBinder.Bind(
-                    new[] { from h in helpOption select (h, true) },
-                    from a in q select (false, a),
-                    args);
+            var (e, tail) =
+                q.Bind(args);
 
-            Console.WriteLine(options);
+            Console.WriteLine(e);
             Console.WriteLine(string.Join("; ", tail));
 
-            if (help)
+            if (e.Help)
                 Describe(q, Console.Out);
         }
 
