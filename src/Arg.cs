@@ -217,6 +217,9 @@ namespace Arqs
                            s => s),
                    r => r.Count > 0 ? r.GetResult() : default);
 
+        public static IArg<T, OptionArgInfo> Option<T>(string name, IParser<T> parser) =>
+            Option(name, default(T), parser);
+
         public static IArg<T, OptionArgInfo> Option<T>(string name, T @default, IParser<T> parser) =>
             name switch
             {
@@ -234,15 +237,6 @@ namespace Arqs
 
         public static IArg<T, OptionArgInfo> Option<T>(string name, ShortOptionName shortName, T @default, IParser<T> parser) =>
             Create(new OptionArgInfo(name, shortName), () => Accumulator.Value(parser, default(T), @default, (_, v) => v), r => r.Count > 0 ? r.GetResult() : @default);
-
-        public static IArg<T, OptionArgInfo> Option<T>(string name, IParser<T> parser) =>
-            name switch
-            {
-                null => throw new ArgumentNullException(nameof(name)),
-                var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
-                var s when s.Length == 1 => Option(ShortOptionName.Parse(s[0]), parser),
-                _ => Option(name, null, parser)
-            };
 
         public static IArg<T, OptionArgInfo> Option<T>(char shortName, IParser<T> parser) =>
             Option(ShortOptionName.Parse(shortName), parser);
