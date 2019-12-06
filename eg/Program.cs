@@ -68,20 +68,21 @@ namespace Arqs.Sample
             (a, b);
 
         static int Main(string[] args) =>
-            Run(from help in Arg.Flag("help").ShortName('h')/*.WithOtherName("?").Break()*/
-                join num in Arg.Option("num", 123, Parser.Int32())
-                        .ShortName('n')
-                        .Description("an integer.")
-                        .Description("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.") on 1 equals 1
-                join str in Arg.Operand("string", "str", Parser.String()).Description("the quick brown fox jumps over the lazy dog. the quick brown fox jumps over the lazy dog.") on 1 equals 1
-                join force in Arg.Flag("force") on 1 equals 1
-                select Foo(help ? CommandAction.Help : CommandAction.Run, args =>
+            Run(from h in Arg.Flag("h", (ShortOptionName)'h').Description("print this summary")
+                join q in Arg.Flag("quiet", (ShortOptionName)'q').Description("suppress summary after successful commit") on 1 equals 1
+                join v in Arg.Flag("verbose", (ShortOptionName)'v').Description("show diff in commit message template") on 1 equals 1
+                join f in Arg.Option("file", (ShortOptionName)'F', Parser.String()).Description("read message from file") on 1 equals 1
+                join a in Arg.Option("author", Parser.String()).Description("override author for commit") on 1 equals 1
+                join d in Arg.Option("date", Parser.String()).Description("override date for commit") on 1 equals 1
+                select Foo(h ? CommandAction.Help : CommandAction.Run, args =>
                 {
                     Console.WriteLine(new
                     {
-                        Num = num,
-                        Force = force,
-                        Str = str,
+                        Quiet = q,
+                        Verbose = v,
+                        File = f,
+                        Author = a,
+                        Date = d,
                         Tail = $"[{string.Join("; ", args)}]",
                     });
                     return 0;
