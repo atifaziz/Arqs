@@ -34,9 +34,6 @@ namespace Arqs
 
     public static class ArgBinder
     {
-        public static IList<IArg> Inspect<T>(this IArgBinder<T> binder) =>
-            binder.Inspect().ToList();
-
         public static IArgBinder<(T, U)> Zip<T, U>(this IArgBinder<T> first, IArgBinder<U> second) =>
             Create(bindings => (first.Bind(bindings), second.Bind(bindings)),
                    () => first.Inspect().Concat(second.Inspect()));
