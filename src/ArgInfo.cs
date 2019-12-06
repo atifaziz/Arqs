@@ -121,7 +121,7 @@ namespace Arqs
             Update(Name, ShortName, value, ValueName, Description);
 
         public OptionArgInfo WithValueName(string value) =>
-            Update(value, ShortName, IsValueOptional, value, Description);
+            Update(Name, ShortName, IsValueOptional, value, Description);
 
         public new OptionArgInfo WithDescription(string value) =>
             Update(Name, ShortName, IsValueOptional, ValueName, value);
