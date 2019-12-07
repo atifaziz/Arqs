@@ -33,7 +33,10 @@ namespace Arqs.Tests
                 join bar  in Arg.Flag("bar")  on 1 equals 1
                 join baz  in Arg.Option("baz", Parser.Int32().Nullable())  on 1 equals 1
                 join qux  in Arg.Option("qux", "?", Parser.String()) on 1 equals 1
-                join opt  in Arg.Option("opt", "?", Parser.String()).ShortName('o').DefaultValue().List() on 1 equals 1
+                join opt1 in Arg.Option("opt-1", "?", Parser.String()).ShortName('o').DefaultValue().List() on 1 equals 1
+                join opt2 in Arg.Option("opt-2", "?", Parser.String()).DefaultValue() on 1 equals 1
+                join opt3 in Arg.Option("opt-3", "?", Parser.String()).DefaultValue() on 1 equals 1
+                join opt4 in Arg.Option("opt-4", Parser.String()).DefaultValue() on 1 equals 1
                 join xs   in Arg.Option("x", Parser.String()).List() on 1 equals 1
                 join @int in Arg.IntOpt("int") on 1 equals 1
                 join pos1 in Arg.Operand("x", Parser.String()) on 1 equals 1
@@ -48,7 +51,10 @@ namespace Arqs.Tests
                     Bar = bar,
                     Baz = baz,
                     Qux = qux,
-                    Opt = opt,
+                    Opt1 = opt1,
+                    Opt2 = opt2,
+                    Opt3 = opt3,
+                    Opt4 = opt4,
                     X = string.Join(",", xs),
                     Int = @int,
                     Pos1 = pos1,
@@ -60,12 +66,13 @@ namespace Arqs.Tests
 
             var commandLine = @"
                 1 --bar -v -v -v --foo 4 2 hello
-                -ofoo -obar -o --opt=baz -vo -vovo
+                -ofoo -obar -o --opt-1=baz -vo -vovo
                 @some_macro
                 --foo 2 -x one -42 -x two - world -x three -xfour
                 -f -f -ff -f+ -f- -f-f+ -f+f- -ff- -f+vf-
                 -v- --verbose --verbose+ --verbose-
                 -p --page -p+ -p- --no-page
+                --opt-2 --opt-3=foo
                 "
                     .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
@@ -77,7 +84,10 @@ namespace Arqs.Tests
             Assert.That(result.Bar, Is.True);
             Assert.That(result.Baz, Is.Null);
             Assert.That(result.Qux, Is.EqualTo("?"));
-            Assert.That(result.Opt, Is.EqualTo(new[] { "foo", "bar", "?", "baz", "?", "vo" }));
+            Assert.That(result.Opt1, Is.EqualTo(new[] { (true, "foo"), (true, "bar"), (true, "?"), (true, "baz"), (true, "?"), (true, "vo") }));
+            Assert.That(result.Opt2, Is.EqualTo((true, "?")));
+            Assert.That(result.Opt3, Is.EqualTo((true, "foo")));
+            Assert.That(result.Opt4, Is.EqualTo((false, (string)null)));
             Assert.That(result.X, Is.EqualTo("one,two,three,four"));
             Assert.That(result.Int, Is.EqualTo(42));
             Assert.That(result.Pos1, Is.EqualTo("1"));
@@ -96,7 +106,10 @@ namespace Arqs.Tests
             Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
             Assert.That(infos.Dequeue().Name, Is.EqualTo("qux"));
-            Assert.That(infos.Dequeue().Name(), Is.EqualTo("opt"));
+            Assert.That(infos.Dequeue().Name(), Is.EqualTo("opt-1"));
+            Assert.That(infos.Dequeue().Name(), Is.EqualTo("opt-2"));
+            Assert.That(infos.Dequeue().Name(), Is.EqualTo("opt-3"));
+            Assert.That(infos.Dequeue().Name(), Is.EqualTo("opt-4"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("x"));
             Assert.That(infos.Dequeue().Name, Is.Null);
             Assert.That(infos.Dequeue().Name, Is.Null);

@@ -126,8 +126,8 @@ namespace Arqs
         public static IArg<T, OptionArgInfo> ShortName<T>(this IArg<T, OptionArgInfo> arg, ShortOptionName value) =>
             arg.WithInfo(arg.Info.WithShortName(value));
 
-        public static IArg<T, OptionArgInfo> DefaultValue<T>(this IArg<T, OptionArgInfo> arg) =>
-            arg.WithInfo(arg.Info.WithIsValueOptional(true));
+        public static IArg<(bool Present, T Value), OptionArgInfo> DefaultValue<T>(this IArg<T, OptionArgInfo> arg) =>
+            arg.FlagPresence().WithInfo(arg.Info.WithIsValueOptional(true));
 
         public static IArg<T, OptionArgInfo> RequireValue<T>(this IArg<T, OptionArgInfo> arg) =>
             arg.WithInfo(arg.Info.WithIsValueOptional(false));
