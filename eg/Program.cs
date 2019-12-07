@@ -7,13 +7,29 @@ namespace Arqs.Sample
     using System.Linq;
     using System.Text;
 
-    enum CommandAction { Run, Help }
+    public enum RunMode { Main, Help, Version }
+
+    public sealed class RunResult
+    {
+        readonly Func<ImmutableArray<string>, int> _main;
+
+        public RunResult(RunMode mode, Func<ImmutableArray<string>, int> main)
+        {
+            _main = main;
+            Mode = mode;
+        }
+
+        public RunMode Mode { get; }
+
+        public int Main(ImmutableArray<string> args) =>
+            _main(args);
+    }
 
     sealed class Command<T>
     {
         public Command(
             IArgBinder<T> binder,
-            Func<T, CommandAction> f,
+            Func<T, RunMode> f,
             string[] args,
             Func<T, ImmutableArray<string>, int> runner)
         {
@@ -24,7 +40,7 @@ namespace Arqs.Sample
     static class Command
     {
         public static Command<T> Create<T>(IArgBinder<T> binder,
-            Func<T, CommandAction> f,
+            Func<T, RunMode> f,
             string[] args,
             Func<T, ImmutableArray<string>, int> runner) =>
             new Command<T>(binder, f, args, runner);
@@ -34,14 +50,14 @@ namespace Arqs.Sample
     {
         public static int Run<T>(
             IArgBinder<T> binder,
-            Func<T, CommandAction> f,
+            Func<T, RunMode> f,
             string[] args,
             Func<T, ImmutableArray<string>, int> runner)
         {
             var (result, tail) = binder.Bind(args);
             switch (f(result))
             {
-                case CommandAction.Help:
+                case RunMode.Help:
                     Describe(binder, Console.Out);
                     return 0;
                 default:
@@ -49,26 +65,25 @@ namespace Arqs.Sample
             }
         }
 
-        public static int Run(
-            IArgBinder<(CommandAction, Func<ImmutableArray<string>, int>)> binder,
-            string[] args)
+        public static int Run(string[] args, IArgBinder<RunResult> binder)
         {
-            var ((action, f), tail) = binder.Bind(args);
-            switch (action)
+            var (rr, tail) = binder.Bind(args);
+            switch (rr.Mode)
             {
-                case CommandAction.Help:
+                case RunMode.Help:
                     Describe(binder, Console.Out);
                     return 0;
                 default:
-                    return f(tail);
+                    return rr.Main(tail);
             }
         }
 
-        static (CommandAction, Func<ImmutableArray<string>, int>) Foo(CommandAction a, Func<ImmutableArray<string>, int> b) =>
+        static (RunMode, Func<ImmutableArray<string>, int>) Foo(RunMode a, Func<ImmutableArray<string>, int> b) =>
             (a, b);
 
         static int Main(string[] args) =>
-            Run(from h in Arg.Flag("help").ShortName('h').Description("print this summary")
+            Run(args,
+                from h in Arg.Flag("help").ShortName('h').Description("print this summary")
                 join q in Arg.Flag("quiet").ShortName('q').Description("suppress summary after successful commit") on 1 equals 1
                 join v in Arg.Flag("verbose").ShortName('v').Description("show diff in commit message template") on 1 equals 1
                 join f in Arg.Option("file", Parser.String()).ValueName("<file>").ShortName('F').Description("read message from file") on 1 equals 1
@@ -102,7 +117,7 @@ namespace Arqs.Sample
                 join am in Arg.Flag("amend").Description("amend previous commit") on 1 equals 1
                 join npr in Arg.Flag("no-post-rewrite").Description("bypass post-rewrite hook") on 1 equals 1
                 join u in Arg.Option("untracked-files", Parser.String()).ShortName('u').ValueName("<mode>").DefaultValue().Description("show untracked files, optional modes: all, normal, no. (Default: all)") on 1 equals 1
-                select Foo(h ? CommandAction.Help : CommandAction.Run, args =>
+                select new RunResult(h ? RunMode.Help : RunMode.Main, args =>
                 {
                     Console.WriteLine(new
                     {
@@ -141,8 +156,7 @@ namespace Arqs.Sample
                         Tail = $"[{string.Join("; ", args)}]",
                     });
                     return 0;
-                }),
-                args);
+                }));
 
         static int Main1(string[] args) =>
             Run(from help in Arg.Flag("help").ShortName('h')/*.WithOtherName("?").Break()*/
@@ -161,7 +175,7 @@ namespace Arqs.Sample
                     Str = str,
                     Tail = $"[{string.Join("; ", tail)}]",
                 },
-                e => e.Help ? CommandAction.Help : CommandAction.Run,
+                e => e.Help ? RunMode.Help : RunMode.Main,
                 args,
                 (e, _) =>
                 {
