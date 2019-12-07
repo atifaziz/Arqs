@@ -325,6 +325,7 @@ namespace Arqs
                                }
                                return ParseResult.Success(array.ToImmutable());
                            },
+                           delegate { throw new InvalidOperationException(); },
                            r => r),
                    r => r.Count > 0 ? r.GetResult() : ImmutableArray<T>.Empty);
     }

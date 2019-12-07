@@ -34,17 +34,12 @@ namespace Arqs
     public static class Accumulator
     {
         public static IAccumulator<T> Value<T>(IParser<T> parser) =>
-            Value(parser, default, (_, v) => v);
+            Value(parser, default(T), default, (_, v) => v);
 
         static readonly IAccumulator<int> Counter =
             Value(Parser.BooleanPlusMinus, 0, true, (count, flag) => flag ? count + 1 : count - 1);
 
         public static IAccumulator<int> Count() => Counter;
-
-        public static IAccumulator<T> Value<T>(IParser<T> parser, T seed, Func<T, T, T> folder) =>
-            Create(seed, (acc, arg) => arg.TryRead(out var s) && parser.Parse(s) is (true, var v)
-                                     ? ParseResult.Success(folder(acc, v)) : default,
-                         v => v);
 
         public static IAccumulator<S> Value<T, S>(IParser<T> parser, S seed, T @default, Func<S, T, S> folder) =>
             Create(seed, (acc, arg) => arg.TryRead(out var s) && parser.Parse(s) is (true, var v)
@@ -62,19 +57,14 @@ namespace Arqs
             Create(seed, delegate { throw new InvalidOperationException(); }, defaultor, v => v);
 
         public static IAccumulator<T> Return<T>(T value) =>
-            new DelegatingAccumulator<T, T>(true, value, (v, arg) => ParseResult.Success(v), r => r);
-
-        public static IAccumulator<T> Create<T>(T seed, Func<T, Reader<string>, ParseResult<T>> reader) =>
-            new DelegatingAccumulator<T, T>(seed, reader, v => v);
-
-        public static IAccumulator<R> Create<T, R>(T seed, Func<T, Reader<string>, ParseResult<T>> reader, Func<T, R> resultSelector) =>
-            new DelegatingAccumulator<T, R>(seed, reader, resultSelector);
+            new DelegatingAccumulator<T, T>(true, value, (v, arg) => ParseResult.Success(v), s => s, r => r);
 
         public static IAccumulator<R> Create<T, R>(T seed, Func<T, Reader<string>, ParseResult<T>> reader, Func<T, T> defaultor, Func<T, R> resultSelector) =>
             new DelegatingAccumulator<T, R>(seed, reader, defaultor, resultSelector);
 
         public static IAccumulator<U> Select<T, U>(this IAccumulator<T> accumulator, Func<T, U> f) =>
             Create(0, (count, arg) => accumulator.Accumulate(arg) ? ParseResult.Success(count + 1) : default,
+                   _ => { accumulator.AccumulateDefault(); return _; },
                    r => f(accumulator.GetResult()));
 
         sealed class DelegatingAccumulator<S, R> : IAccumulator<R>
@@ -85,15 +75,6 @@ namespace Arqs
             S _state;
             bool _errored;
 
-            public DelegatingAccumulator(bool initialized, S seed,
-                                         Func<S, Reader<string>, ParseResult<S>> reader,
-                                         Func<S, R> resultSelector) :
-                this(initialized, seed, reader, null, resultSelector) {}
-
-            public DelegatingAccumulator(S seed,
-                                         Func<S, Reader<string>, ParseResult<S>> reader,
-                                         Func<S, R> resultSelector) :
-                this(seed, reader, null, resultSelector) {}
 
             public DelegatingAccumulator(S seed,
                                          Func<S, Reader<string>, ParseResult<S>> reader,
@@ -109,7 +90,7 @@ namespace Arqs
                 Count = initialized ? 1 : 0;
                 _state = seed;
                 _reader = reader ?? throw new ArgumentNullException(nameof(reader));
-                _defaultor = defaultor;
+                _defaultor = defaultor ?? throw new ArgumentNullException(nameof(defaultor));
                 _resultSelector = resultSelector;
             }
 
@@ -141,8 +122,6 @@ namespace Arqs
             public void AccumulateDefault()
             {
                 if (_errored)
-                    throw new InvalidOperationException();
-                if (_defaultor == null)
                     throw new InvalidOperationException();
                 Count++;
                 _state = _defaultor(_state);
