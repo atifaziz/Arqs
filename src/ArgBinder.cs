@@ -43,7 +43,7 @@ namespace Arqs
         public static (T Result, ImmutableArray<string> Tail)
             Bind<T>(this IArgBinder<T> binder, params string[] args)
         {
-            var specs = binder.InspectArgs().ToList();
+            var specs = binder.GetArgs().ToList();
 
             var accumulators = new IAccumulator[specs.Count];
             for (var i = 0; i < specs.Count; i++)

@@ -43,7 +43,7 @@ namespace Arqs
                 textSelector(_text);
         }
 
-        public static IEnumerable<IArg> InspectArgs(this IArgBinder binder) =>
+        public static IEnumerable<IArg> GetArgs(this IArgBinder binder) =>
             from ir in binder.Inspect()
             select ir.Match(arg => arg, _ => null) into arg
             where arg != null
