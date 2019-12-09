@@ -81,6 +81,18 @@ namespace Arqs
         public string LongName { get; }
         public string AbbreviatedName { get; }
 
+        public OptionNames WithShortName(char value) =>
+            WithShortName(ShortOptionName.Parse(value));
+
+        public OptionNames WithShortName(ShortOptionName value) =>
+            All(value, LongName, AbbreviatedName);
+
+        public OptionNames WithLongName(string value) =>
+            All(ShortName, value, AbbreviatedName);
+
+        public OptionNames WithAbbreviatedName(string value) =>
+            All(ShortName, LongName, value);
+
         public override string ToString() =>
             string.Join(", ",
                 from n in new[]
