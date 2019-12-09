@@ -24,7 +24,7 @@ namespace Arqs
     public interface IArgBinder
     {
         object Bind(Func<IAccumulator> source);
-        IEnumerable<IArg> Inspect();
+        IEnumerable<IInspectionRecord> Inspect();
     }
 
     public interface IArgBinder<out T> : IArgBinder
@@ -43,7 +43,7 @@ namespace Arqs
         public static (T Result, ImmutableArray<string> Tail)
             Bind<T>(this IArgBinder<T> binder, params string[] args)
         {
-            var specs = binder.Inspect().ToList();
+            var specs = binder.InspectArgs().ToList();
 
             var accumulators = new IAccumulator[specs.Count];
             for (var i = 0; i < specs.Count; i++)
@@ -256,7 +256,7 @@ namespace Arqs
             }
         }
 
-        public static IArgBinder<T> Create<T>(Func<Func<IAccumulator>, T> binder, Func<IEnumerable<IArg>> inspector) =>
+        public static IArgBinder<T> Create<T>(Func<Func<IAccumulator>, T> binder, Func<IEnumerable<IInspectionRecord>> inspector) =>
             new DelegatingArgBinder<T>(binder, inspector);
 
         public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
@@ -287,10 +287,10 @@ namespace Arqs
         sealed class DelegatingArgBinder<T> : IArgBinder<T>
         {
             readonly Func<Func<IAccumulator>, T> _binder;
-            readonly Func<IEnumerable<IArg>> _inspector;
+            readonly Func<IEnumerable<IInspectionRecord>> _inspector;
 
             public DelegatingArgBinder(Func<Func<IAccumulator>, T> binder,
-                                       Func<IEnumerable<IArg>> inspector)
+                                       Func<IEnumerable<IInspectionRecord>> inspector)
             {
                 _binder = binder;
                 _inspector = inspector;
@@ -302,7 +302,7 @@ namespace Arqs
             public T Bind(Func<IAccumulator> source) =>
                 _binder(source);
 
-            public IEnumerable<IArg> Inspect() =>
+            public IEnumerable<IInspectionRecord> Inspect() =>
                 _inspector();
         }
     }

@@ -98,7 +98,7 @@ namespace Arqs.Tests
             Assert.That(tail, Is.EqualTo(new[] { "hello", "there", "-", "world" }));
             Assert.That(result.Page, Is.EqualTo(new[] { true, true, true, false, false }));
 
-            var infos = new Queue<IArg>(args.Inspect());
+            var infos = new Queue<IArg>(args.InspectArgs());
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("h"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("V"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("v"));
@@ -145,7 +145,7 @@ namespace Arqs.Tests
             Assert.That(result.Rest, Is.EqualTo(new[] { "hello", "world" }));
             Assert.That(tail, Is.Empty);
 
-            var infos = new Queue<IArg>(args.Inspect());
+            var infos = new Queue<IArg>(args.InspectArgs());
             Assert.That(infos.Dequeue().LongName, Is.EqualTo("foo"));
             Assert.That(infos.Dequeue().LongName, Is.EqualTo("bar"));
             Assert.That(infos.Dequeue().LongName, Is.EqualTo("baz"));
@@ -175,7 +175,7 @@ namespace Arqs.Tests
             Assert.That(result.Qux, Is.EqualTo((true, "quux")));
             Assert.That(tail, Is.Empty);
 
-            var infos = new Queue<IArg>(args.Inspect());
+            var infos = new Queue<IArg>(args.InspectArgs());
             Assert.That(infos.Dequeue().LongName, Is.EqualTo("foo"));
             Assert.That(infos.Dequeue().LongName, Is.EqualTo("bar"));
             Assert.That(infos.Dequeue().LongName, Is.EqualTo("baz"));
@@ -200,7 +200,7 @@ namespace Arqs.Tests
             Assert.That(result.D, Is.EqualTo(42));
             Assert.That(tail, Is.Empty);
 
-            var infos = new Queue<IArg>(args.Inspect());
+            var infos = new Queue<IArg>(args.InspectArgs());
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("a"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("b"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("c"));

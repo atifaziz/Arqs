@@ -35,7 +35,7 @@ namespace Arqs
         new IAccumulator<T> CreateAccumulator();
     }
 
-    sealed class Arg<T, TInfo> : IArg<T, TInfo> where TInfo : IArgInfo
+    sealed class Arg<T, TInfo> : IArg<T, TInfo>, IInspectionRecord where TInfo : IArgInfo
     {
         readonly Func<IAccumulator<T>> _accumulatorFactory;
         readonly Func<IAccumulator<T>, T> _binder;
@@ -65,7 +65,10 @@ namespace Arqs
         public T Bind(Func<IAccumulator> source) =>
             _binder((IAccumulator<T>)source());
 
-        public IEnumerable<IArg> Inspect() { yield return this; }
+        public IEnumerable<IInspectionRecord> Inspect() { yield return this; }
+
+        T1 IInspectionRecord.Match<T1>(Func<IArg, T1> argSelector, Func<string, T1> textSelector) =>
+            argSelector(this);
     }
 
     public static class Arg
@@ -310,5 +313,19 @@ namespace Arqs
                            delegate { throw new InvalidOperationException(); },
                            r => r),
                    r => r.Count > 0 ? r.GetResult() : ImmutableArray<T>.Empty);
+
+        public static IArgBinder<string> Text(string line)
+        {
+            IEnumerable<IInspectionRecord> singleton = ImmutableArray.Create(InspectionRecord.Text(line));
+            return ArgBinder.Create(_ => line, () => singleton);
+        }
+
+        public static IArgBinder<ImmutableArray<string>> Text(params string[] lines)
+        {
+            IEnumerable<IInspectionRecord> rs = null;
+            return ArgBinder.Create(_ => ImmutableArray.Create(lines),
+                                    () => rs ??= from line in lines
+                                                 select InspectionRecord.Text(line));
+        }
     }
 }
