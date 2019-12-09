@@ -61,6 +61,9 @@ namespace Arqs
 
         OptionNames(ShortOptionName shortName, string longName, string abbreviatedName)
         {
+            if (shortName == null && longName == null && abbreviatedName == null)
+                throw new ArgumentException("All option names cannot be null.");
+
             if (longName != null && longName.Length < 2)
                 throw new ArgumentException("The long name of an option must be greater than a character in length when supplied.", nameof(longName));
 
