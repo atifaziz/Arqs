@@ -116,7 +116,7 @@ namespace Arqs.Sample
                 join z in Arg.Flag("null").ShortName('z').Description("terminate entries with NUL") on 1 equals 1
                 join am in Arg.Flag("amend").Description("amend previous commit") on 1 equals 1
                 join npr in Arg.Flag("no-post-rewrite").Description("bypass post-rewrite hook") on 1 equals 1
-                join u in Arg.Option("untracked-files", Parser.String()).ShortName('u').ValueName("<mode>").DefaultValue().Description("show untracked files, optional modes: all, normal, no. (Default: all)") on 1 equals 1
+                join u in Arg.Option("untracked-files", "all", Parser.String()).ShortName('u').ValueName("<mode>").DefaultValue().Description("show untracked files, optional modes: all, normal, no. (Default: all)") on 1 equals 1
                 select new RunResult(h ? RunMode.Help : RunMode.Main, args =>
                 {
                     Console.WriteLine(new
@@ -137,7 +137,7 @@ namespace Arqs.Sample
                         Edit = e,
                         CleanUp = cu,
                         Status = st,
-                        GpgSign = gs ?? "(default)",
+                        GpgSign = gs,
                         All = all,
                         Include = inc,
                         Interactive = ia,
@@ -152,7 +152,7 @@ namespace Arqs.Sample
                         Null = z,
                         Amend = am,
                         NoPostRewrite = npr,
-                        UntrackedFiles = u ?? "(default)",
+                        UntrackedFiles = u,
                         Tail = $"[{string.Join("; ", args)}]",
                     });
                     return 0;
