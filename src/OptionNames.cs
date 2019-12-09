@@ -36,11 +36,15 @@ namespace Arqs
                     ShortNamesCache[ch] = new OptionNames(ShortOptionName.Parse(ch), null, null);
             }
         }
+
         public static OptionNames Short(char shortName) =>
             All(shortName, null, null);
 
         public static OptionNames Short(ShortOptionName shortName) =>
             All(shortName, null, null);
+
+        public static OptionNames Long(string longName) =>
+            All(null, longName, null);
 
         public static OptionNames ShortLong(char shortName, string longName) =>
             All(shortName, longName, null);
@@ -111,6 +115,13 @@ namespace Arqs
             => (ShortName       != null ? 1 : 0)
              + (LongName        != null ? 1 : 0)
              + (AbbreviatedName != null ? 1 : 0);
+
+        public void Deconstruct(out ShortOptionName shortName, out string longName, out string abbreviatedName)
+        {
+            shortName = ShortName;
+            longName = LongName;
+            abbreviatedName = AbbreviatedName;
+        }
 
         public static OptionNames Guess(string name1, string name2, string name3)
         {
