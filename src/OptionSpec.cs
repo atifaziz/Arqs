@@ -24,7 +24,18 @@ namespace Arqs
     {
         static readonly char[] PipeSeparator = { '|' };
 
-        public static OptionSpec Parse(string spec)
+        [Flags]
+        public enum ParseOptions
+        {
+            Default,
+            ForbidFlag,
+            ForbidValue,
+        }
+
+        public static OptionSpec Parse(string spec) =>
+            Parse(spec, ParseOptions.Default);
+
+        public static OptionSpec Parse(string spec, ParseOptions options)
         {
             var tokens = spec.Split((char[])null, 2, StringSplitOptions.RemoveEmptyEntries);
 
@@ -42,10 +53,16 @@ namespace Arqs
                 var ei = name.IndexOf('=');
                 if (ei < 0)
                 {
+                    if ((options & ParseOptions.ForbidFlag) == ParseOptions.ForbidFlag)
+                        throw new ArgumentException("Invalid option specification.", nameof(spec));
+
                     isFlag = true;
                 }
                 else
                 {
+                    if ((options & ParseOptions.ForbidValue) == ParseOptions.ForbidValue)
+                        throw new ArgumentException("Invalid option specification.", nameof(spec));
+
                     isFlag = false;
 
                     var bi = name.IndexOf('[');
