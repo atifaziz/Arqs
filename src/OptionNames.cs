@@ -92,13 +92,13 @@ namespace Arqs
             WithShortName(ShortOptionName.Parse(value));
 
         public OptionNames WithShortName(ShortOptionName value) =>
-            All(value, LongName, AbbreviatedName);
+            value == ShortName ? this : All(value, LongName, AbbreviatedName);
 
         public OptionNames WithLongName(string value) =>
-            All(ShortName, value, AbbreviatedName);
+            value == LongName ? this : All(ShortName, value, AbbreviatedName);
 
         public OptionNames WithAbbreviatedName(string value) =>
-            All(ShortName, LongName, value);
+            value == AbbreviatedName ? this : All(ShortName, LongName, value);
 
         public override string ToString() =>
             string.Join(", ",
