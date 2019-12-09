@@ -20,7 +20,7 @@ namespace Arqs
     using System.Diagnostics;
     using System.Text;
 
-    public sealed class OptionSpec
+    sealed class OptionSpec
     {
         static readonly char[] PipeSeparator = { '|' };
 
