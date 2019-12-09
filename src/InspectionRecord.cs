@@ -28,7 +28,7 @@ namespace Arqs
 
     public static class InspectionRecord
     {
-        public static readonly IInspectionRecord BlankText = Text(string.Empty);
+        static readonly IInspectionRecord BlankText = Text(string.Empty);
 
         public static IInspectionRecord Text(string text) =>
             string.IsNullOrEmpty(text) ? BlankText : new TextInspectionRecord(text);
