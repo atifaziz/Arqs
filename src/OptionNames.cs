@@ -41,6 +41,17 @@ namespace Arqs
 
         public OptionNames(ShortOptionName shortName, string longName, string abbreviatedName)
         {
+            if (longName != null && longName.Length < 2)
+                throw new ArgumentException("The long name of an option must be greater than a character in length when supplied.", nameof(longName));
+
+            if (abbreviatedName != null)
+            {
+                if (longName == null)
+                    throw new ArgumentNullException(nameof(longName));
+                if (abbreviatedName.Length >= longName.Length)
+                    throw new ArgumentException("The abbreviated name of an option cannot be longer than its long name.", nameof(abbreviatedName));
+            }
+
             ShortName = shortName;
             LongName = longName;
             AbbreviatedName = abbreviatedName;
