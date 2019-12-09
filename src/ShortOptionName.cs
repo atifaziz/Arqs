@@ -81,7 +81,8 @@ namespace Arqs
         public static bool operator !=(ShortOptionName left, ShortOptionName right) =>
             !Equals(left, right);
 
-        public static implicit operator char(ShortOptionName name) => name._ld[0];
+        public static explicit operator char(ShortOptionName name) => name._ld[0];
+
         public static explicit operator ShortOptionName(char ch) => Parse(ch);
 
         public int CompareTo(ShortOptionName other) =>

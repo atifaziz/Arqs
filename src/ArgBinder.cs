@@ -124,7 +124,7 @@ namespace Arqs
                         for (j = 1; j < arg.Length; j++)
                         {
                             var ch = arg[j];
-                            var i = specs.FindIndex(e => e.ShortName() is ShortOptionName sn && sn == ch);
+                            var i = specs.FindIndex(e => e.ShortName() is ShortOptionName sn && (char)sn == ch);
                             if (i >= 0)
                             {
                                 var spec = specs[i];

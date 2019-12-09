@@ -55,8 +55,8 @@ namespace Arqs
             All(ShortOptionName.Parse(shortName), longName, abbreviatedName);
 
         public static OptionNames All(ShortOptionName shortName, string longName, string abbreviatedName) =>
-            longName == null && abbreviatedName == null
-            ? ShortNamesCache[shortName]
+            longName == null && abbreviatedName == null && shortName != null
+            ? ShortNamesCache[(char)shortName]
             : new OptionNames(shortName, longName, abbreviatedName);
 
         OptionNames(ShortOptionName shortName, string longName, string abbreviatedName)
