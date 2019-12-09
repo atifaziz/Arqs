@@ -21,25 +21,45 @@ namespace Arqs
 
     public sealed class OptionNames
     {
-        public OptionNames(char shortName) :
-            this(shortName, null, null) {}
+        static readonly OptionNames[] ShortNamesCache;
 
-        public OptionNames(ShortOptionName shortName) :
-            this(shortName, null, null) {}
+        static OptionNames()
+        {
+            ShortNamesCache = new OptionNames['z' + 1];
+            InitShortNamesCacheRange('0', '9');
+            InitShortNamesCacheRange('A', 'Z');
+            InitShortNamesCacheRange('a', 'z');
 
-        public OptionNames(char shortName, string longName) :
-            this(shortName, longName, null) {}
+            static void InitShortNamesCacheRange(char first, char last)
+            {
+                for (var ch = first; ch <= last; ch++)
+                    ShortNamesCache[ch] = new OptionNames(ShortOptionName.Parse(ch), null, null);
+            }
+        }
+        public static OptionNames Short(char shortName) =>
+            All(shortName, null, null);
 
-        public OptionNames(ShortOptionName shortName, string longName) :
-            this(shortName, longName, null) {}
+        public static OptionNames Short(ShortOptionName shortName) =>
+            All(shortName, null, null);
 
-        public OptionNames(string longName, string abbreviatedName) :
-            this(null, longName, abbreviatedName) {}
+        public static OptionNames ShortLong(char shortName, string longName) =>
+            All(shortName, longName, null);
 
-        public OptionNames(char shortName, string longName, string abbreviatedName) :
-            this(ShortOptionName.Parse(shortName), longName, abbreviatedName) {}
+        public static OptionNames ShortLong(ShortOptionName shortName, string longName) =>
+            All(shortName, longName, null);
 
-        public OptionNames(ShortOptionName shortName, string longName, string abbreviatedName)
+        public static OptionNames LongAbbreviated(string longName, string abbreviatedName) =>
+            All(null, longName, abbreviatedName);
+
+        public static OptionNames All(char shortName, string longName, string abbreviatedName) =>
+            All(ShortOptionName.Parse(shortName), longName, abbreviatedName);
+
+        public static OptionNames All(ShortOptionName shortName, string longName, string abbreviatedName) =>
+            longName == null && abbreviatedName == null
+            ? ShortNamesCache[shortName]
+            : new OptionNames(shortName, longName, abbreviatedName);
+
+        OptionNames(ShortOptionName shortName, string longName, string abbreviatedName)
         {
             if (longName != null && longName.Length < 2)
                 throw new ArgumentException("The long name of an option must be greater than a character in length when supplied.", nameof(longName));
@@ -119,7 +139,7 @@ namespace Arqs
                 }
             }
 
-            return new OptionNames(s, l, m);
+            return All(s, l, m);
 
             static ArgumentException DuplicateError(int i, string name) =>
                 throw new ArgumentException("Duplicate argument name: " + name,
