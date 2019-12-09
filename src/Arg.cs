@@ -178,7 +178,7 @@ namespace Arqs
         public static IArg<bool, FlagArgInfo> Flag(string spec)
         {
             var parsed = OptionSpec.Parse(spec, OptionSpec.ParseOptions.ForbidValue);
-            return Flag(parsed.Names).Description(parsed.Description);
+            return Flag(parsed.Names).Description(parsed.Description).Negatable(parsed.IsLongNameNegatable);
         }
 
         public static IArg<bool, FlagArgInfo> Flag(OptionNames names) =>
@@ -189,7 +189,7 @@ namespace Arqs
         public static IArg<int, FlagArgInfo> CountedFlag(string spec)
         {
             var parsed = OptionSpec.Parse(spec, OptionSpec.ParseOptions.ForbidValue);
-            return CountedFlag(parsed.Names).Description(parsed.Description);
+            return CountedFlag(parsed.Names).Description(parsed.Description).Negatable(parsed.IsLongNameNegatable);
         }
 
         public static IArg<int, FlagArgInfo> CountedFlag(OptionNames names) =>
@@ -218,7 +218,7 @@ namespace Arqs
 
         public static IArg<T, OptionArgInfo> Option<T>(string spec, T @default, IParser<T> parser)
         {
-            var parsed = OptionSpec.Parse(spec);
+            var parsed = OptionSpec.Parse(spec, OptionSpec.ParseOptions.ForbidNoPrefix);
             var arg = Option(parsed.Names, @default, parser).Description(parsed.Description).ValueName(parsed.ValueName);
             return parsed.IsValueOptional ? arg.WithInfo(arg.Info.WithIsValueOptional(parsed.IsValueOptional)) : arg;
         }

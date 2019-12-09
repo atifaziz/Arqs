@@ -27,9 +27,10 @@ namespace Arqs
         [Flags]
         public enum ParseOptions
         {
-            Default,
-            ForbidFlag,
-            ForbidValue,
+            Default        = 0,
+            ForbidFlag     = 1,
+            ForbidValue    = 2,
+            ForbidNoPrefix = 4,
         }
 
         public static OptionSpec Parse(string spec) =>
@@ -43,7 +44,9 @@ namespace Arqs
 
             var names = tokens[0].Split(PipeSeparator, 3, StringSplitOptions.RemoveEmptyEntries);
             string name1 = null, name2 = null, name3 = null, valueName = null;
-            bool isValueOptional = false, isFlag = false;
+            var isValueOptional = false;
+            var isFlag = false;
+            var isLongNameNegatable = false;
 
             var i = 0;
             foreach (var name in names)
@@ -83,6 +86,20 @@ namespace Arqs
                     }
                 }
 
+                const string noPrefix = "[no-]";
+
+                if (nameToken.Length > noPrefix.Length && nameToken.StartsWith(noPrefix, StringComparison.Ordinal))
+                {
+                    if ((options & ParseOptions.ForbidNoPrefix) == ParseOptions.ForbidNoPrefix)
+                        throw new ArgumentException("Invalid option specification.", nameof(spec));
+
+                    if (!isFlag)
+                        throw new ArgumentException("Non-flag option specification cannot specify the \"[no-]\" prefix in its long name.", nameof(spec));
+
+                    nameToken = nameToken.Substring(noPrefix.Length);
+                    isLongNameNegatable = true;
+                }
+
                 switch (i)
                 {
                     case 0: name1 = nameToken; break;
@@ -90,16 +107,20 @@ namespace Arqs
                     case 2: name3 = nameToken; break;
                     default: Debug.Fail($"0 <= '{nameof(i)}' < 3"); break;
                 }
+
                 i++;
             }
 
-            return new OptionSpec(OptionNames.Guess(name1, name2, name3), isFlag, isValueOptional, valueName, description);
+            return new OptionSpec(OptionNames.Guess(name1, name2, name3),
+                                  isFlag, isLongNameNegatable,
+                                  isValueOptional, valueName, description);
         }
 
-        OptionSpec(OptionNames names, bool isFlag, bool isValueOptional, string valueName, string description)
+        OptionSpec(OptionNames names, bool isFlag, bool isLongNameNegatable, bool isValueOptional, string valueName, string description)
         {
             Names = names ?? throw new ArgumentNullException(nameof(names));
             IsFlag = isFlag;
+            IsLongNameNegatable = isLongNameNegatable;
             IsValueOptional = isValueOptional;
             ValueName = valueName;
             Description = description;
@@ -107,6 +128,7 @@ namespace Arqs
 
         public OptionNames Names { get; }
         public bool IsFlag { get; }
+        public bool IsLongNameNegatable { get; }
         public string ValueName { get; }
         public bool IsValueOptional { get; }
         public string Description { get; }
@@ -129,6 +151,8 @@ namespace Arqs
             {
                 if (sb.Length > 0)
                     sb.Append('|');
+                if (IsLongNameNegatable)
+                    sb.Append("[no-]");
                 sb.Append(ln);
             }
 
