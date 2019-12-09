@@ -242,7 +242,7 @@ namespace Arqs
                 }
             }
 
-            var ar = accumulators.Read();
+            using var ar = accumulators.Read();
             return (binder.Bind(() => ar.Read()), tail.ToImmutableArray());
 
             static bool IsDigital(string s, int start, int end)
