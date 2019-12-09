@@ -43,7 +43,7 @@ namespace Arqs.Tests
                 join pos2 in Arg.Operand("x", Parser.String()) on 1 equals 1
                 join flag in Arg.Flag("f").List() on 1 equals 1
                 join m    in Arg.Macro("macro", s => "-v there".Split()) on 1 equals 1
-                join page in Arg.Flag("page", (ShortOptionName)'p').Negatable(true).List() on 1 equals 1
+                join page in Arg.Flag("p|page").Negatable(true).List() on 1 equals 1
                 select new
                 {
                     Verbosity = vl,
@@ -102,18 +102,18 @@ namespace Arqs.Tests
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("h"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("V"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("v"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("foo"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("qux"));
-            Assert.That(infos.Dequeue().Name(), Is.EqualTo("opt-1"));
-            Assert.That(infos.Dequeue().Name(), Is.EqualTo("opt-2"));
-            Assert.That(infos.Dequeue().Name(), Is.EqualTo("opt-3"));
-            Assert.That(infos.Dequeue().Name(), Is.EqualTo("opt-4"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("foo"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("bar"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("baz"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("qux"));
+            Assert.That(infos.Dequeue().LongName(), Is.EqualTo("opt-1"));
+            Assert.That(infos.Dequeue().LongName(), Is.EqualTo("opt-2"));
+            Assert.That(infos.Dequeue().LongName(), Is.EqualTo("opt-3"));
+            Assert.That(infos.Dequeue().LongName(), Is.EqualTo("opt-4"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("x"));
-            Assert.That(infos.Dequeue().Name, Is.Null);
-            Assert.That(infos.Dequeue().Name, Is.Null);
-            Assert.That(infos.Dequeue().Name, Is.Null);
+            Assert.That(infos.Dequeue().LongName, Is.Null);
+            Assert.That(infos.Dequeue().LongName, Is.Null);
+            Assert.That(infos.Dequeue().LongName, Is.Null);
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("f"));
             Assert.That(((MacroArgInfo)infos.Dequeue().Info).ValueName, Is.EqualTo("macro"));
         }
@@ -146,14 +146,14 @@ namespace Arqs.Tests
             Assert.That(tail, Is.Empty);
 
             var infos = new Queue<IArg>(args.Inspect());
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("foo"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("qux"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("foo"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("bar"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("baz"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("qux"));
             Assert.That(infos.Dequeue().ShortName().ToString(), Is.EqualTo("x"));
-            Assert.That(infos.Dequeue().Name, Is.Null);
-            Assert.That(infos.Dequeue().Name, Is.Null);
-            Assert.That(infos.Dequeue().Name, Is.Null);
+            Assert.That(infos.Dequeue().LongName, Is.Null);
+            Assert.That(infos.Dequeue().LongName, Is.Null);
+            Assert.That(infos.Dequeue().LongName, Is.Null);
         }
 
         [Test]
@@ -176,9 +176,9 @@ namespace Arqs.Tests
             Assert.That(tail, Is.Empty);
 
             var infos = new Queue<IArg>(args.Inspect());
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("foo"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("bar"));
-            Assert.That(infos.Dequeue().Name, Is.EqualTo("baz"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("foo"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("bar"));
+            Assert.That(infos.Dequeue().LongName, Is.EqualTo("baz"));
         }
 
         [Test]

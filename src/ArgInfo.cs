@@ -16,6 +16,8 @@
 
 namespace Arqs
 {
+    using System;
+
     public interface IArgInfo
     {
         string Description { get; }
@@ -88,85 +90,75 @@ namespace Arqs
     {
         public const string DefaultValueName = "VALUE";
 
-        public OptionArgInfo(string name, ShortOptionName shortName) :
-            this(name, shortName, null) {}
+        public OptionArgInfo(OptionNames names) :
+            this(names, null) {}
 
-        public OptionArgInfo(string name, ShortOptionName shortName, string valueName) :
-            this(name, shortName, valueName, null) {}
+        public OptionArgInfo(OptionNames names, string valueName) :
+            this(names, valueName, null) {}
 
-        public OptionArgInfo(string name, ShortOptionName shortName, string valueName, string description) :
-            this(name, shortName, valueName, false, description) {}
+        public OptionArgInfo(OptionNames names, string valueName, string description) :
+            this(names, valueName, false, description) {}
 
-        public OptionArgInfo(string name, ShortOptionName shortName, string valueName, bool isValueOptional, string description) :
+        public OptionArgInfo(OptionNames names, string valueName, bool isValueOptional, string description) :
             base(description)
         {
-            Name = name;
-            ShortName = shortName;
+            Names = names ?? throw new ArgumentNullException(nameof(names));
             IsValueOptional = isValueOptional;
             ValueName = valueName ?? DefaultValueName;
         }
 
-        public string Name { get; }
-        public ShortOptionName ShortName { get; }
+        public OptionNames Names { get; }
         public bool IsValueOptional { get; }
         public string ValueName { get; }
 
-        public OptionArgInfo WithName(string value) =>
-            Update(value, ShortName, IsValueOptional, ValueName, Description);
-
-        public OptionArgInfo WithShortName(ShortOptionName value) =>
-            Update(Name, value, IsValueOptional, ValueName, Description);
+        public OptionArgInfo WithNames(OptionNames value) =>
+            Update(value, IsValueOptional, ValueName, Description);
 
         public OptionArgInfo WithIsValueOptional(bool value) =>
-            Update(Name, ShortName, value, ValueName, Description);
+            Update(Names, value, ValueName, Description);
 
         public OptionArgInfo WithValueName(string value) =>
-            Update(Name, ShortName, IsValueOptional, value, Description);
+            Update(Names, IsValueOptional, value, Description);
 
         public new OptionArgInfo WithDescription(string value) =>
-            Update(Name, ShortName, IsValueOptional, ValueName, value);
+            Update(Names, IsValueOptional, ValueName, value);
 
         protected override ArgInfo Update(string description) =>
-            Update(Name, ShortName, IsValueOptional, ValueName, description);
+            Update(Names, IsValueOptional, ValueName, description);
 
-        protected virtual OptionArgInfo Update(string name, ShortOptionName shortName, bool isValueOptional, string valueName, string description) =>
-            new OptionArgInfo(name, shortName, valueName, isValueOptional, description);
+        protected virtual OptionArgInfo Update(OptionNames names, bool isValueOptional, string valueName, string description) =>
+            new OptionArgInfo(names, valueName, isValueOptional, description);
     }
 
     public class FlagArgInfo : ArgInfo
     {
-        public FlagArgInfo(string name, ShortOptionName shortName) :
-            this(name, shortName, false, null) {}
+        public FlagArgInfo(OptionNames names) :
+            this(names, false, null) {}
 
-        public FlagArgInfo(string name, ShortOptionName shortName, bool isNegatable, string description) :
+        public FlagArgInfo(OptionNames names, bool isNegatable, string description) :
             base(description)
         {
-            Name = name;
-            ShortName = shortName;
+            Names = names ?? throw new ArgumentNullException(nameof(names));
             IsNegatable = isNegatable;
         }
 
-        public string Name { get; }
-        public ShortOptionName ShortName { get; }
+        public OptionNames Names { get; }
         public bool IsNegatable { get; }
 
-        public FlagArgInfo WithName(string value) =>
-            Update(value, ShortName, IsNegatable, Description);
-
-        public FlagArgInfo WithShortName(ShortOptionName value) =>
-            Update(Name, value, IsNegatable, Description);
+        public FlagArgInfo WithNames(OptionNames value) =>
+            Update(value, IsNegatable, Description);
 
         public FlagArgInfo WithIsNegatable(bool value) =>
-            Update(Name, ShortName, value, Description);
+            Update(Names, value, Description);
 
         public new FlagArgInfo WithDescription(string value) =>
-            Update(Name, ShortName, IsNegatable, value);
+            Update(Names, IsNegatable, value);
 
         protected override ArgInfo Update(string description) =>
-            Update(Name, ShortName, IsNegatable, description);
+            Update(Names, IsNegatable, description);
 
-        protected virtual FlagArgInfo Update(string name, ShortOptionName shortName, bool isNegatable, string description) =>
-            new FlagArgInfo(name, shortName, isNegatable, description);
+        protected virtual FlagArgInfo Update(OptionNames names, bool isNegatable, string description) =>
+            new FlagArgInfo(names, isNegatable, description);
     }
 
     public class IntegerOptionArgInfo : ArgInfo

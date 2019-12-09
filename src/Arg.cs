@@ -85,19 +85,27 @@ namespace Arqs
         public static bool IsOperand(this IArg arg) =>
             arg.Info is OperandArgInfo;
 
-        public static string Name(this IArg arg) =>
+        public static OptionNames Names(this IArg arg) =>
             arg.Info switch
             {
-                OptionArgInfo info => info.Name,
-                FlagArgInfo info => info.Name,
+                OptionArgInfo info => info.Names,
+                FlagArgInfo info => info.Names,
+                _ => null,
+            };
+
+        public static string LongName(this IArg arg) =>
+            arg.Info switch
+            {
+                OptionArgInfo info => info.Names.LongName,
+                FlagArgInfo info => info.Names.LongName,
                 _ => null,
             };
 
         public static ShortOptionName ShortName(this IArg arg) =>
             arg.Info switch
             {
-                OptionArgInfo info => info.ShortName,
-                FlagArgInfo info => info.ShortName,
+                OptionArgInfo info => info.Names.ShortName,
+                FlagArgInfo info => info.Names.ShortName,
                 _ => null,
             };
 
@@ -117,14 +125,17 @@ namespace Arqs
         public static T Description<T>(this T arg, string value) where T : IArg =>
             (T)arg.WithInfo(arg.Info.WithDescription(value));
 
-        public static IArg<T, OptionArgInfo> Name<T>(this IArg<T, OptionArgInfo> arg, string value) =>
-            arg.WithInfo(arg.Info.WithName(value));
+        public static IArg<T, OptionArgInfo> Names<T>(this IArg<T, OptionArgInfo> arg, OptionNames value) =>
+            arg.WithInfo(arg.Info.WithNames(value));
+
+        public static IArg<T, OptionArgInfo> LongName<T>(this IArg<T, OptionArgInfo> arg, string value) =>
+            arg.Names(arg.Info.Names.WithLongName(value));
 
         public static IArg<T, OptionArgInfo> ShortName<T>(this IArg<T, OptionArgInfo> arg, char value) =>
             arg.ShortName(ShortOptionName.Parse(value));
 
         public static IArg<T, OptionArgInfo> ShortName<T>(this IArg<T, OptionArgInfo> arg, ShortOptionName value) =>
-            arg.WithInfo(arg.Info.WithShortName(value));
+            arg.Names(arg.Info.Names.WithShortName(value));
 
         public static IArg<(bool Present, T Value), OptionArgInfo> DefaultValue<T>(this IArg<T, OptionArgInfo> arg) =>
             arg.FlagPresence().WithInfo(arg.Info.WithIsValueOptional(true));
@@ -132,14 +143,17 @@ namespace Arqs
         public static IArg<T, OptionArgInfo> RequireValue<T>(this IArg<T, OptionArgInfo> arg) =>
             arg.WithInfo(arg.Info.WithIsValueOptional(false));
 
-        public static IArg<T, FlagArgInfo> Name<T>(this IArg<T, FlagArgInfo> arg, string value) =>
-            arg.WithInfo(arg.Info.WithName(value));
+        public static IArg<T, FlagArgInfo> Names<T>(this IArg<T, FlagArgInfo> arg, OptionNames value) =>
+            arg.WithInfo(arg.Info.WithNames(value));
+
+        public static IArg<T, FlagArgInfo> LongName<T>(this IArg<T, FlagArgInfo> arg, string value) =>
+            arg.Names(arg.Info.Names.WithLongName(value));
 
         public static IArg<T, FlagArgInfo> ShortName<T>(this IArg<T, FlagArgInfo> arg, char value) =>
             arg.ShortName(ShortOptionName.Parse(value));
 
         public static IArg<T, FlagArgInfo> ShortName<T>(this IArg<T, FlagArgInfo> arg, ShortOptionName value) =>
-            arg.WithInfo(arg.Info.WithShortName(value));
+            arg.Names(arg.Info.Names.WithShortName(value));
 
         public static IArg<T, OptionArgInfo> ValueName<T>(this IArg<T, OptionArgInfo> arg, string value) =>
             arg.WithInfo(arg.Info.WithValueName(value));
@@ -161,43 +175,25 @@ namespace Arqs
                          Func<IAccumulator<T>, T> binder) where TInfo : IArgInfo =>
             new Arg<T, TInfo>(info, accumulatorFactory, binder);
 
-        public static IArg<bool, FlagArgInfo> Flag(string name) =>
-            name switch
-            {
-                null => throw new ArgumentNullException(nameof(name)),
-                var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
-                var s when s.Length == 1 => Flag(ShortOptionName.Parse(s[0])),
-                _ => Flag(name, null)
-            };
+        public static IArg<bool, FlagArgInfo> Flag(string spec)
+        {
+            var parsed = OptionSpec.Parse(spec, OptionSpec.ParseOptions.ForbidValue);
+            return Flag(parsed.Names).Description(parsed.Description);
+        }
 
-        public static IArg<bool, FlagArgInfo> Flag(char shortName) =>
-            Flag(ShortOptionName.Parse(shortName));
-
-        public static IArg<bool, FlagArgInfo> Flag(ShortOptionName shortName) =>
-            Flag(null, shortName);
-
-        public static IArg<bool, FlagArgInfo> Flag(string name, ShortOptionName shortName) =>
-            Create(new FlagArgInfo(name, shortName),
+        public static IArg<bool, FlagArgInfo> Flag(OptionNames names) =>
+            Create(new FlagArgInfo(names),
                    () => Accumulator.Value(Parser.Boolean("+", "-"), false, true, (_, v) => v),
                    r => r.Count > 0 && r.GetResult());
 
-        public static IArg<int, FlagArgInfo> CountedFlag(string name) =>
-            name switch
-            {
-                null => throw new ArgumentNullException(nameof(name)),
-                var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
-                var s when s.Length == 1 => CountedFlag(ShortOptionName.Parse(s[0])),
-                _ => CountedFlag(name, null)
-            };
+        public static IArg<int, FlagArgInfo> CountedFlag(string spec)
+        {
+            var parsed = OptionSpec.Parse(spec, OptionSpec.ParseOptions.ForbidValue);
+            return CountedFlag(parsed.Names).Description(parsed.Description);
+        }
 
-        public static IArg<int, FlagArgInfo> CountedFlag(char shortName) =>
-            CountedFlag(ShortOptionName.Parse(shortName));
-
-        public static IArg<int, FlagArgInfo> CountedFlag(ShortOptionName shortName) =>
-            CountedFlag(null, shortName);
-
-        public static IArg<int, FlagArgInfo> CountedFlag(string name, ShortOptionName shortName) =>
-            Create(new FlagArgInfo(name, shortName),
+        public static IArg<int, FlagArgInfo> CountedFlag(OptionNames names) =>
+            Create(new FlagArgInfo(names),
                    Accumulator.Count, r => r.GetResult());
 
         public static IArg<(string Name, ImmutableArray<string> Args), MacroArgInfo> Macro(string name, Func<string, IEnumerable<string>> expander) =>
@@ -217,35 +213,21 @@ namespace Arqs
                            s => s),
                    r => r.Count > 0 ? r.GetResult() : default);
 
-        public static IArg<T, OptionArgInfo> Option<T>(string name, IParser<T> parser) =>
-            Option(name, default(T), parser);
+        public static IArg<T, OptionArgInfo> Option<T>(string spec, IParser<T> parser) =>
+            Option(spec, default, parser);
 
-        public static IArg<T, OptionArgInfo> Option<T>(string name, T @default, IParser<T> parser) =>
-            name switch
-            {
-                null => throw new ArgumentNullException(nameof(name)),
-                var s when s.Length == 0 => throw new ArgumentException(null, nameof(name)),
-                var s when s.Length == 1 => Option(ShortOptionName.Parse(s[0]), @default, parser),
-                _ => Option(name, null, @default, parser)
-            };
+        public static IArg<T, OptionArgInfo> Option<T>(string spec, T @default, IParser<T> parser)
+        {
+            var parsed = OptionSpec.Parse(spec);
+            var arg = Option(parsed.Names, @default, parser).Description(parsed.Description).ValueName(parsed.ValueName);
+            return parsed.IsValueOptional ? arg.WithInfo(arg.Info.WithIsValueOptional(parsed.IsValueOptional)) : arg;
+        }
 
-        public static IArg<T, OptionArgInfo> Option<T>(char shortName, T @default, IParser<T> parser) =>
-            Option(ShortOptionName.Parse(shortName), @default, parser);
+        public static IArg<T, OptionArgInfo> Option<T>(OptionNames names, IParser<T> parser) =>
+            Option(names, default, parser);
 
-        public static IArg<T, OptionArgInfo> Option<T>(ShortOptionName shortName, T @default, IParser<T> parser) =>
-            Option(null, shortName, @default, parser);
-
-        public static IArg<T, OptionArgInfo> Option<T>(string name, ShortOptionName shortName, T @default, IParser<T> parser) =>
-            Create(new OptionArgInfo(name, shortName), () => Accumulator.Value(parser, default(T), @default, (_, v) => v), r => r.Count > 0 ? r.GetResult() : @default);
-
-        public static IArg<T, OptionArgInfo> Option<T>(char shortName, IParser<T> parser) =>
-            Option(ShortOptionName.Parse(shortName), parser);
-
-        public static IArg<T, OptionArgInfo> Option<T>(ShortOptionName shortName, IParser<T> parser) =>
-            Option(null, shortName, parser);
-
-        public static IArg<T, OptionArgInfo> Option<T>(string name, ShortOptionName shortName, IParser<T> parser) =>
-            Option(name, shortName, default, parser);
+        public static IArg<T, OptionArgInfo> Option<T>(OptionNames names, T @default, IParser<T> parser) =>
+            Create(new OptionArgInfo(names), () => Accumulator.Value(parser, default(T), @default, (_, v) => v), r => r.Count > 0 ? r.GetResult() : @default);
 
         public static IArg<int, IntegerOptionArgInfo> IntOpt(string name) =>
             IntOpt(name, -1);

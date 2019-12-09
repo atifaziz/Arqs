@@ -187,7 +187,7 @@ namespace Arqs
                 {
                     var i = specs.FindIndex(e => name switch
                     {
-                        (string ln, null) => e.Name() == ln,
+                        (string ln, null) => e.LongName() == ln,
                         (null, ShortOptionName sn) => e.ShortName() == sn,
                         _ => false,
                     });
@@ -197,7 +197,7 @@ namespace Arqs
                               && tln.StartsWith("no-", StringComparison.Ordinal))
                     {
                         var rln = tln.Substring(3);
-                        i = specs.FindIndex(e => e.IsNegtableFlag() && e.Name() == rln);
+                        i = specs.FindIndex(e => e.IsNegtableFlag() && e.LongName() == rln);
                         if (i >= 0)
                         {
                             var lch = arg[arg.Length - 1];
