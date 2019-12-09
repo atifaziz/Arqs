@@ -16,10 +16,6 @@
 
 namespace Arqs
 {
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-
     static class String
     {
         /// <summary>
@@ -29,90 +25,5 @@ namespace Arqs
 
         public static string ConcatAll(string a, string b) =>
             a != null && b != null ? a + b : null;
-
-        /// <summary>
-        /// Returns a string that is a concatenation of three if none of them
-        /// are <c>null</c>; otherwise returns <c>null</c>.
-        /// </summary>
-
-        public static string ConcatAll(string a, string b, string c) =>
-            a != null && b != null && c != null ? a + b + c : null;
-
-        /// <summary>
-        /// Returns a string that is a concatenation of four if none of them
-        /// are <c>null</c>; otherwise returns <c>null</c>.
-        /// </summary>
-
-        public static string ConcatAll(string a, string b, string c, string d) =>
-            a != null && b != null && c != null && d != null ? a + b + c + d : null;
-
-        /// <summary>
-        /// Returns a string that is a concatenation of input strings if none
-        /// of them  are <c>null</c>; otherwise returns <c>null</c>.
-        /// </summary>
-
-        public static string ConcatAll(params string[] strings)
-        {
-            foreach (var str in strings)
-            {
-                if (str == null)
-                    return null;
-            }
-
-            return string.Concat(strings);
-        }
-
-        /// <summary>
-        /// Returns a string that is a prefix prepended to a suffix if neither
-        /// of them are <c>null</c>; otherwise returns <c>null</c>.
-        /// </summary>
-
-        public static string PrependAll(string suffix, string prefix) =>
-            suffix != null && prefix != null ? suffix + prefix : null;
-
-        /// <summary>
-        /// Returns a string that is two prefixes prepended to a suffix if none
-        /// of them are <c>null</c>; otherwise returns <c>null</c>.
-        /// </summary>
-
-        public static string PrependAll(string suffix, string prefix1, string prefix2) =>
-            suffix != null && prefix1 != null && prefix2 != null ? prefix1 + prefix2 + suffix : null;
-
-        /// <summary>
-        /// Returns a string that is three prefixes prepended to a suffix if
-        /// none of them are <c>null</c>; otherwise returns <c>null</c>.
-        /// </summary>
-
-        public static string PrependAll(string suffix, string prefix1, string prefix2, string c) =>
-            suffix != null && prefix1 != null && prefix2 != null && c != null ? prefix1 + prefix2 + c + suffix : null;
-
-        /// <summary>
-        /// Returns a string that is prefixes prepended to a suffix if none of
-        /// them are <c>null</c>; otherwise returns <c>null</c>.
-        /// </summary>
-
-        public static string PrependAll(string suffix, params string[] prefixes)
-        {
-            if (suffix == null)
-                return null;
-
-            foreach (var prefix in prefixes)
-            {
-                if (prefix == null)
-                    return null;
-            }
-
-            var sb = new StringBuilder(suffix);
-            foreach (var prefix in prefixes)
-                sb.Append(prefix);
-
-            return sb.Append(suffix).ToString();
-        }
-
-        public static IEnumerable<string> Choose(params string[] strings) =>
-            Choose((IEnumerable<string>)strings);
-
-        public static IEnumerable<string> Choose(IEnumerable<string> strings) =>
-            from s in strings where s != null select s;
     }
 }
