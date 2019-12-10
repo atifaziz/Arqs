@@ -77,7 +77,7 @@ namespace Arqs.Tests
                     .Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
 
             var (result, tail) =
-                ArgBinder.Bind(args, commandLine);
+                CommandLine.Bind(args, commandLine);
 
             Assert.That(result.Verbosity, Is.EqualTo(7));
             Assert.That(result.Foo, Is.EqualTo(new[] { 4, 2 }));
