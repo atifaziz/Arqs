@@ -275,7 +275,8 @@ namespace Arqs
 
             foreach (var e in records)
             {
-                switch (e.Match(arg => (object)arg, txt => txt))
+                switch (e.Match(arg => arg.Visibility() != Visibility.Hidden ? arg : (object)null,
+                                txt => txt))
                 {
                     case string s: writer.WriteLine(s); break;
                     case IArg arg: Describe(arg); break;

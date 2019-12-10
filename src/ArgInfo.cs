@@ -18,72 +18,104 @@ namespace Arqs
 {
     using System;
 
+    public enum Visibility
+    {
+        Default,
+        Hidden,
+    }
+
     public interface IArgInfo
     {
         string Description { get; }
+        Visibility Visibility { get; }
         IArgInfo WithDescription(string value);
+        IArgInfo WithVisibility(Visibility value);
     }
 
     public abstract class ArgInfo : IArgInfo
     {
-        protected ArgInfo(string description) =>
+        protected ArgInfo(string description, Visibility visibility)
+        {
             Description = description;
+            Visibility = visibility;
+        }
 
         public string Description { get; }
+        public Visibility Visibility { get; }
 
         public ArgInfo WithDescription(string value) =>
-            Update(value);
+            Update(value, Visibility);
+
+        public ArgInfo WithVisibility(Visibility value) =>
+            Update(Description, value);
+
+        IArgInfo IArgInfo.WithVisibility(Visibility value) =>
+            WithVisibility(value);
 
         IArgInfo IArgInfo.WithDescription(string value) =>
             WithDescription(value);
 
-        protected abstract ArgInfo Update(string description);
+        protected abstract ArgInfo Update(string description, Visibility visibility);
     }
 
     public class OperandArgInfo : ArgInfo
     {
-        public OperandArgInfo(string valueName) : this(valueName, null) {}
+        public OperandArgInfo(string valueName) :
+            this(valueName, null) {}
 
         public OperandArgInfo(string valueName, string description) :
-            base(description) =>
+            this(valueName, description, Visibility.Default) {}
+
+        public OperandArgInfo(string valueName, string description, Visibility visibility) :
+            base(description, visibility) =>
             ValueName = valueName;
 
         public string ValueName { get; }
 
         public OperandArgInfo WithValueName(string value) =>
-            Update(value, Description);
+            Update(value, Description, Visibility);
 
         public new OperandArgInfo WithDescription(string value) =>
-            Update(ValueName, value);
+            Update(ValueName, value, Visibility);
 
-        protected override ArgInfo Update(string description) =>
-            Update(ValueName, description);
+        public new OperandArgInfo WithVisibility(Visibility value) =>
+            Update(ValueName, Description, value);
 
-        protected virtual OperandArgInfo Update(string valueName, string description) =>
-            new OperandArgInfo(valueName, description);
+        protected override ArgInfo Update(string description, Visibility visibility) =>
+            Update(ValueName, description, visibility);
+
+        protected virtual OperandArgInfo Update(string valueName, string description, Visibility visibility) =>
+            new OperandArgInfo(valueName, description, visibility);
     }
 
     public class MacroArgInfo : ArgInfo
     {
-        public MacroArgInfo(string valueName) : this(valueName, null) { }
+        public MacroArgInfo(string valueName) :
+            this(valueName, null) {}
 
         public MacroArgInfo(string valueName, string description) :
-            base(description) =>
+            this(valueName, description, Visibility.Default) {}
+
+        public MacroArgInfo(string valueName, string description, Visibility visibility) :
+            base(description, visibility) =>
             ValueName = valueName;
 
         public string ValueName { get; }
 
         public MacroArgInfo WithValueName(string value) =>
-            Update(value, Description);
+            Update(value, Description, Visibility);
 
         public new MacroArgInfo WithDescription(string value) =>
-            Update(ValueName, value);
+            Update(ValueName, value, Visibility);
 
-        protected override ArgInfo Update(string description) =>
-            Update(ValueName, description);
+        public new MacroArgInfo WithVisibility(Visibility value) =>
+            Update(ValueName, Description, value);
 
-        protected virtual MacroArgInfo Update(string valueName, string description) =>
-            new MacroArgInfo(valueName, description);
+        protected override ArgInfo Update(string description, Visibility visibility) =>
+            Update(ValueName, description, visibility);
+
+        protected virtual MacroArgInfo Update(string valueName, string description, Visibility visibility) =>
+            new MacroArgInfo(valueName, description, visibility);
     }
 
     public class OptionArgInfo : ArgInfo
@@ -100,7 +132,11 @@ namespace Arqs
             this(names, valueName, false, description) {}
 
         public OptionArgInfo(OptionNames names, string valueName, bool isValueOptional, string description) :
-            base(description)
+            this(names, valueName, isValueOptional, description, Visibility.Default) {}
+
+        public OptionArgInfo(OptionNames names, string valueName, bool isValueOptional,
+                             string description, Visibility visibility) :
+            base(description, visibility)
         {
             Names = names ?? throw new ArgumentNullException(nameof(names));
             IsValueOptional = isValueOptional;
@@ -112,22 +148,26 @@ namespace Arqs
         public string ValueName { get; }
 
         public OptionArgInfo WithNames(OptionNames value) =>
-            Update(value, IsValueOptional, ValueName, Description);
+            Update(value, IsValueOptional, ValueName, Description, Visibility);
 
         public OptionArgInfo WithIsValueOptional(bool value) =>
-            Update(Names, value, ValueName, Description);
+            Update(Names, value, ValueName, Description, Visibility);
 
         public OptionArgInfo WithValueName(string value) =>
-            Update(Names, IsValueOptional, value, Description);
+            Update(Names, IsValueOptional, value, Description, Visibility);
 
         public new OptionArgInfo WithDescription(string value) =>
-            Update(Names, IsValueOptional, ValueName, value);
+            Update(Names, IsValueOptional, ValueName, value, Visibility);
 
-        protected override ArgInfo Update(string description) =>
-            Update(Names, IsValueOptional, ValueName, description);
+        public new OptionArgInfo WithVisibility(Visibility value) =>
+            Update(Names, IsValueOptional, ValueName, Description, Visibility);
 
-        protected virtual OptionArgInfo Update(OptionNames names, bool isValueOptional, string valueName, string description) =>
-            new OptionArgInfo(names, valueName, isValueOptional, description);
+        protected override ArgInfo Update(string description, Visibility visibility) =>
+            Update(Names, IsValueOptional, ValueName, description, visibility);
+
+        protected virtual OptionArgInfo Update(OptionNames names, bool isValueOptional, string valueName,
+                                               string description, Visibility visibility) =>
+            new OptionArgInfo(names, valueName, isValueOptional, description, visibility);
     }
 
     public class FlagArgInfo : ArgInfo
@@ -136,7 +176,10 @@ namespace Arqs
             this(names, false, null) {}
 
         public FlagArgInfo(OptionNames names, bool isNegatable, string description) :
-            base(description)
+            this(names, isNegatable, description, Visibility.Default) {}
+
+        public FlagArgInfo(OptionNames names, bool isNegatable, string description, Visibility visibility) :
+            base(description, visibility)
         {
             Names = names ?? throw new ArgumentNullException(nameof(names));
             IsNegatable = isNegatable;
@@ -146,41 +189,52 @@ namespace Arqs
         public bool IsNegatable { get; }
 
         public FlagArgInfo WithNames(OptionNames value) =>
-            Update(value, IsNegatable, Description);
+            Update(value, IsNegatable, Description, Visibility);
 
         public FlagArgInfo WithIsNegatable(bool value) =>
-            Update(Names, value, Description);
+            Update(Names, value, Description, Visibility);
 
         public new FlagArgInfo WithDescription(string value) =>
-            Update(Names, IsNegatable, value);
+            Update(Names, IsNegatable, value, Visibility);
 
-        protected override ArgInfo Update(string description) =>
-            Update(Names, IsNegatable, description);
+        public new FlagArgInfo WithVisibility(Visibility value) =>
+            Update(Names, IsNegatable, Description, value);
 
-        protected virtual FlagArgInfo Update(OptionNames names, bool isNegatable, string description) =>
-            new FlagArgInfo(names, isNegatable, description);
+        protected override ArgInfo Update(string description, Visibility visibility) =>
+            Update(Names, IsNegatable, description, visibility);
+
+        protected virtual FlagArgInfo Update(OptionNames names, bool isNegatable,
+                                             string description, Visibility visibility) =>
+            new FlagArgInfo(names, isNegatable, description, visibility);
     }
 
     public class IntegerOptionArgInfo : ArgInfo
     {
-        public IntegerOptionArgInfo(string valueName) : this(valueName, null) { }
+        public IntegerOptionArgInfo(string valueName) :
+            this(valueName, null) {}
 
         public IntegerOptionArgInfo(string valueName, string description) :
-            base(description) =>
+            this(valueName, description, Visibility.Default) {}
+
+        public IntegerOptionArgInfo(string valueName, string description, Visibility visibility) :
+            base(description, visibility) =>
             ValueName = valueName;
 
         public string ValueName { get; }
 
         public IntegerOptionArgInfo WithValueName(string value) =>
-            Update(value, Description);
+            Update(value, Description, Visibility);
 
         public new IntegerOptionArgInfo WithDescription(string value) =>
-            Update(ValueName, value);
+            Update(ValueName, value, Visibility);
 
-        protected override ArgInfo Update(string description) =>
-            Update(ValueName, description);
+        public new IntegerOptionArgInfo WithVisibility(Visibility value) =>
+            Update(ValueName, Description, value);
 
-        protected virtual IntegerOptionArgInfo Update(string valueName, string description) =>
-            new IntegerOptionArgInfo(valueName, description);
+        protected override ArgInfo Update(string description, Visibility visibility) =>
+            Update(ValueName, description, visibility);
+
+        protected virtual IntegerOptionArgInfo Update(string valueName, string description, Visibility visibility) =>
+            new IntegerOptionArgInfo(valueName, description, visibility);
     }
 }

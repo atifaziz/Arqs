@@ -121,6 +121,12 @@ namespace Arqs
         public static T Description<T>(this T arg, string value) where T : IArg =>
             (T)arg.WithInfo(arg.Info.WithDescription(value));
 
+        public static Visibility Visibility(this IArg arg) =>
+            arg.Info.Visibility;
+
+        public static T Visibility<T>(this T arg, Visibility value) where T : IArg =>
+            (T)arg.WithInfo(arg.Info.WithVisibility(value));
+
         public static IArg<T, OptionArgInfo> Names<T>(this IArg<T, OptionArgInfo> arg, OptionNames value) =>
             arg.WithInfo(arg.Info.WithNames(value));
 

@@ -8,6 +8,7 @@ namespace Arqs.Sample
             CommandLine.Run(args,
                 from h in Arg.Flag("help").ShortName('h').Description("print this summary")
                 join q in Arg.Flag("quiet").ShortName('q').Description("suppress summary after successful commit") on 1 equals 1
+                join dbg in Arg.Flag("debug").ShortName('d').Description("debug program").Visibility(Visibility.Hidden) on 1 equals 1
                 join cmo in Help.Text(string.Empty, "Commit message options") on 1 equals 1
                 join v in Arg.Flag("verbose").ShortName('v').Description("show diff in commit message template") on 1 equals 1
                 join f in Arg.Option("file", Parser.String()).ValueName("<file>").ShortName('F').Description("read message from file") on 1 equals 1
