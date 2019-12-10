@@ -306,19 +306,5 @@ namespace Arqs
                            delegate { throw new InvalidOperationException(); },
                            r => r),
                    r => r.Count > 0 ? r.GetResult() : ImmutableArray<T>.Empty);
-
-        public static IArgBinder<string> Text(string line)
-        {
-            IEnumerable<IInspectionRecord> singleton = ImmutableArray.Create(InspectionRecord.Text(line));
-            return ArgBinder.Create(_ => line, () => singleton);
-        }
-
-        public static IArgBinder<ImmutableArray<string>> Text(params string[] lines)
-        {
-            IEnumerable<IInspectionRecord> rs = null;
-            return ArgBinder.Create(_ => ImmutableArray.Create(lines),
-                                    () => rs ??= from line in lines
-                                                 select InspectionRecord.Text(line));
-        }
     }
 }
