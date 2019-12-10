@@ -19,7 +19,9 @@ namespace Arqs
     using System;
     using System.Collections.Generic;
     using System.Collections.Immutable;
+    using System.IO;
     using System.Linq;
+    using System.Text;
 
     public static class CommandLine
     {
@@ -239,6 +241,169 @@ namespace Arqs
                 }
                 return true;
             }
+        }
+
+        public static void Describe<T>(this IArgBinder<T> binder, TextWriter writer) =>
+            Describe(binder.Inspect(), writer);
+
+        static void Describe(IEnumerable<IInspectionRecord> records, TextWriter writer)
+        {
+            var sb = new StringBuilder();
+
+            foreach (var e in records)
+            {
+                switch (e.Match(arg => (object)arg, txt => txt))
+                {
+                    case string s: writer.WriteLine(s); break;
+                    case IArg arg: Describe(arg); break;
+                }
+            }
+
+            void Describe(IArg arg)
+            {
+                sb.Clear();
+                sb.Append("  ");
+
+                var hasShortName = false;
+                if (arg.ShortName() is ShortOptionName shortName)
+                {
+                    hasShortName = true;
+                    sb.Append('-').Append(shortName);
+                }
+                else
+                {
+                    sb.Append("    ");
+                }
+
+                if (arg.LongName() is string longName)
+                {
+                    if (hasShortName)
+                        sb.Append(", ");
+                    sb.Append("--").Append(longName);
+                }
+
+                if (arg.AbbreviatedName() is string abbreviatedName)
+                    sb.Append(", --").Append(abbreviatedName);
+
+                if (arg.ValueName() is string valueName)
+                {
+                    var optional = arg.Info is OptionArgInfo info && info.IsValueOptional;
+                    sb.Append(optional ? "[=" : " ")
+                      .Append(valueName)
+                      .Append(optional ? "]" : string.Empty);
+                }
+
+                var written = sb.Length;
+
+                if (arg.Description() == null)
+                {
+                    writer.WriteLine(sb);
+                    return;
+                }
+
+                if (written < OptionWidth)
+                    sb.Append(new string(' ', OptionWidth - written));
+                else
+                {
+                    writer.WriteLine(sb);
+                    sb.Clear();
+                    sb.Append(new string(' ', OptionWidth));
+                }
+
+                var indent = false;
+                var prefix = new string(' ', OptionWidth + 2);
+                foreach (var line in GetLines(arg.Description()))
+                {
+                    if (indent)
+                        sb.Append(prefix);
+                    sb.Append(line);
+                    writer.WriteLine(sb);
+                    sb.Clear();
+                    indent = true;
+                }
+            }
+        }
+
+        // The following method is work derived from NDesk.Options:
+        //
+        // - http://www.ndesk.org/Options
+
+        #region Copyright (C) 2008 Novell (http://www.novell.com)
+        //
+        // http://www.ndesk.org/Options
+        //
+        // Authors:
+        //  Jonathan Pryor <jpryor@novell.com>
+        //
+        // Copyright (C) 2008 Novell (http://www.novell.com)
+        //
+        // Permission is hereby granted, free of charge, to any person obtaining
+        // a copy of this software and associated documentation files (the
+        // "Software"), to deal in the Software without restriction, including
+        // without limitation the rights to use, copy, modify, merge, publish,
+        // distribute, sublicense, and/or sell copies of the Software, and to
+        // permit persons to whom the Software is furnished to do so, subject to
+        // the following conditions:
+        //
+        // The above copyright notice and this permission notice shall be
+        // included in all copies or substantial portions of the Software.
+        //
+        // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        // NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+        // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+        // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+        // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+        //
+        #endregion
+
+        const int OptionWidth = 29;
+
+        static IEnumerable<string> GetLines(string description, int width = 80)
+        {
+            if (string.IsNullOrEmpty(description))
+            {
+                yield return string.Empty;
+                yield break;
+            }
+
+            var length = width - OptionWidth - 1;
+            int start = 0, end;
+            do
+            {
+                end = GetLineEnd(start, length, description);
+                var c = description[end - 1];
+                if (char.IsWhiteSpace(c))
+                    --end;
+                var writeContinuation = end != description.Length && !IsEolChar(c);
+                var line = description.Substring(start, end - start) +
+                        (writeContinuation ? "-" : string.Empty);
+                yield return line;
+                start = end;
+                if (char.IsWhiteSpace(c))
+                    ++start;
+                length = width - OptionWidth - 2 - 1;
+            }
+            while (end < description.Length);
+
+            static int GetLineEnd(int start, int length, string description)
+            {
+                var end = Math.Min(start + length, description.Length);
+                var sep = -1;
+                for (var i = start + 1; i < end; ++i)
+                {
+                    if (description[i] == '\n')
+                        return i + 1;
+                    if (IsEolChar(description[i]))
+                        sep = i + 1;
+                }
+                if (sep == -1 || end == description.Length)
+                    return end;
+                return sep;
+            }
+
+            static bool IsEolChar(char c) => !char.IsLetterOrDigit(c);
         }
     }
 }
