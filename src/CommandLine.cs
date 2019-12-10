@@ -26,6 +26,12 @@ namespace Arqs
 
     public static class CommandLine
     {
+        public static IEntryPoint EntryPoint(EntryPointMode mode, Action<ImmutableArray<string>> main) =>
+            new EntryPoint(mode, args => { main(args); return Task.FromResult(0); });
+
+        public static IEntryPoint EntryPoint(EntryPointMode mode, Func<ImmutableArray<string>, Task> main) =>
+            new EntryPoint(mode, async args => { await main(args); return 0; });
+
         public static IEntryPoint EntryPoint(EntryPointMode mode, Func<ImmutableArray<string>, int> main) =>
             EntryPoint(mode, args => Task.FromResult(main(args)));
 

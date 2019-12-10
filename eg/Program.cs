@@ -44,7 +44,6 @@ namespace Arqs.Sample
                 join npr in Arg.Flag("no-post-rewrite").Description("bypass post-rewrite hook") on 1 equals 1
                 join u in Arg.Option("untracked-files", "all", Parser.String()).ShortName('u').ValueName("<mode>").DefaultValue().Description("show untracked files, optional modes: all, normal, no. (Default: all)") on 1 equals 1
                 select CommandLine.EntryPoint(h ? EntryPointMode.ShowHelp : EntryPointMode.RunMain, args =>
-                {
                     Console.WriteLine(new
                     {
                         Quiet = q,
@@ -80,8 +79,6 @@ namespace Arqs.Sample
                         NoPostRewrite = npr,
                         UntrackedFiles = u,
                         Tail = $"[{string.Join("; ", args)}]",
-                    });
-                    return 0;
-                }));
+                    })));
     }
 }
