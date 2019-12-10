@@ -58,9 +58,9 @@ namespace Arqs
                 if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
                     var longName = arg.Substring(2);
-                    char lch;
                     if (longName.Length > 2)
                     {
+                        char lch;
                         var equalIndex = longName.IndexOf('=');
                         if (equalIndex > 0)
                         {
