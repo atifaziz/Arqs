@@ -215,6 +215,18 @@ namespace Arqs
                            s => s),
                    r => r.Count > 0 ? r.GetResult() : default);
 
+        public static IArg<string, OptionArgInfo> Option(string spec) =>
+            Option(spec, null);
+
+        public static IArg<string, OptionArgInfo> Option(string spec, string @default) =>
+            Option(spec, @default, Parser.String());
+
+        public static IArg<string, OptionArgInfo> Option(OptionNames names) =>
+            Option(names, null);
+
+        public static IArg<string, OptionArgInfo> Option(OptionNames names, string @default) =>
+            Option(names, @default, Parser.String());
+
         public static IArg<T, OptionArgInfo> Option<T>(string spec, IParser<T> parser) =>
             Option(spec, default, parser);
 

@@ -11,21 +11,21 @@ namespace Arqs.Sample
                 join dbg in Arg.Flag("debug").ShortName('d').Description("debug program").Visibility(Visibility.Hidden) on 1 equals 1
                 join cmo in Help.Text(string.Empty, "Commit message options") on 1 equals 1
                 join v in Arg.Flag("verbose").ShortName('v').Description("show diff in commit message template") on 1 equals 1
-                join f in Arg.Option("file", Parser.String()).ValueName("<file>").ShortName('F').Description("read message from file") on 1 equals 1
-                join a in Arg.Option("author", Parser.String()).ValueName("<author>").Description("override author for commit") on 1 equals 1
+                join f in Arg.Option("file").ValueName("<file>").ShortName('F').Description("read message from file") on 1 equals 1
+                join a in Arg.Option("author").ValueName("<author>").Description("override author for commit") on 1 equals 1
                 join d in Arg.Option("date", Parser.DateTime().Nullable()).ValueName("<date>").Description("override date for commit") on 1 equals 1
-                join m in Arg.Option("message", Parser.String()).ShortName('m').ValueName("<message>").Description("commit message") on 1 equals 1
-                join rem in Arg.Option("reedit-message", Parser.String()).ShortName('c').ValueName("<commit>").Description("reuse and edit message from specified commit") on 1 equals 1
-                join rum in Arg.Option("reuse-message", Parser.String()).ShortName('C').ValueName("<commit>").Description("reuse message from specified commit") on 1 equals 1
-                join fx in Arg.Option("fixup", Parser.String()).ValueName("<commit>").Description("use autosquash formatted message to fixup specified commit") on 1 equals 1
-                join sq in Arg.Option("squash", Parser.String()).ValueName("<commit>").Description("use autosquash formatted message to squash specified commit") on 1 equals 1
+                join m in Arg.Option("message").ShortName('m').ValueName("<message>").Description("commit message") on 1 equals 1
+                join rem in Arg.Option("reedit-message").ShortName('c').ValueName("<commit>").Description("reuse and edit message from specified commit") on 1 equals 1
+                join rum in Arg.Option("reuse-message").ShortName('C').ValueName("<commit>").Description("reuse message from specified commit") on 1 equals 1
+                join fx in Arg.Option("fixup").ValueName("<commit>").Description("use autosquash formatted message to fixup specified commit") on 1 equals 1
+                join sq in Arg.Option("squash").ValueName("<commit>").Description("use autosquash formatted message to squash specified commit") on 1 equals 1
                 join ra in Arg.Flag("reset-author").Description("the commit is authored by me now (used with -C/-c/--amend)") on 1 equals 1
                 join so in Arg.Flag("signoff").ShortName('s').Description("add Signed-off-by:") on 1 equals 1
-                join tf in Arg.Option("template", Parser.String()).ShortName('t').ValueName("<file>").Description("use specified template file") on 1 equals 1
+                join tf in Arg.Option("template").ShortName('t').ValueName("<file>").Description("use specified template file") on 1 equals 1
                 join e in Arg.Flag("edit").ShortName('e').Description("force edit of commit") on 1 equals 1
-                join cu in Arg.Option("cleanup", Parser.String()).ValueName("<default>").Description("how to strip spaces and #comments from message") on 1 equals 1
+                join cu in Arg.Option("cleanup").ValueName("<default>").Description("how to strip spaces and #comments from message") on 1 equals 1
                 join st in Arg.Flag("status").Description("include status in commit message template") on 1 equals 1
-                join gs in Arg.Option("gpg-sign", Parser.String()).ShortName('S').ValueName("<key-id>").DefaultValue().Description("include status in commit message template") on 1 equals 1
+                join gs in Arg.Option("gpg-sign").ShortName('S').ValueName("<key-id>").DefaultValue().Description("include status in commit message template") on 1 equals 1
                 join cco in Help.Text(string.Empty, "Commit contents options") on 1 equals 1
                 join all in Arg.Flag("all").ShortName('a').Description("commit all changed files") on 1 equals 1
                 join inc in Arg.Flag("include").ShortName('i').Description("add specified files to index for commit") on 1 equals 1
@@ -42,7 +42,7 @@ namespace Arqs.Sample
                 join z in Arg.Flag("null").ShortName('z').Description("terminate entries with NUL") on 1 equals 1
                 join am in Arg.Flag("amend").Description("amend previous commit") on 1 equals 1
                 join npr in Arg.Flag("no-post-rewrite").Description("bypass post-rewrite hook") on 1 equals 1
-                join u in Arg.Option("untracked-files", "all", Parser.String()).ShortName('u').ValueName("<mode>").DefaultValue().Description("show untracked files, optional modes: all, normal, no. (Default: all)") on 1 equals 1
+                join u in Arg.Option("untracked-files", "all").ShortName('u').ValueName("<mode>").DefaultValue().Description("show untracked files, optional modes: all, normal, no. (Default: all)") on 1 equals 1
                 select CommandLine.EntryPoint(h ? EntryPointMode.ShowHelp : EntryPointMode.RunMain, args =>
                     Console.WriteLine(new
                     {
