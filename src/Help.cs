@@ -22,7 +22,12 @@ namespace Arqs
 
     public static class Help
     {
-        public static IArgBinder<string> Text(string line)
+        public static readonly IArgBinder<string> BlankLine = CreateText(string.Empty);
+
+        public static IArgBinder<string> Text(string line) =>
+            string.IsNullOrEmpty(line) ? BlankLine : CreateText(line);
+
+        static IArgBinder<string> CreateText(string line)
         {
             IEnumerable<IInspectionRecord> singleton = ImmutableArray.Create(InspectionRecord.Text(line));
             return ArgBinder.Create(_ => line, () => singleton);
