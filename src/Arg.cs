@@ -97,28 +97,13 @@ namespace Arqs
             };
 
         public static string LongName(this IArg arg) =>
-            arg.Info switch
-            {
-                OptionArgInfo info => info.Names.LongName,
-                FlagArgInfo info => info.Names.LongName,
-                _ => null,
-            };
+            arg.Names()?.LongName;
 
         public static ShortOptionName ShortName(this IArg arg) =>
-            arg.Info switch
-            {
-                OptionArgInfo info => info.Names.ShortName,
-                FlagArgInfo info => info.Names.ShortName,
-                _ => null,
-            };
+            arg.Names()?.ShortName;
 
         public static string AbbreviatedName(this IArg arg) =>
-            arg.Info switch
-            {
-                OptionArgInfo info => info.Names.AbbreviatedName,
-                FlagArgInfo info => info.Names.AbbreviatedName,
-                _ => null,
-            };
+            arg.Names()?.AbbreviatedName;
 
         public static string ValueName(this IArg arg) =>
             arg.Info switch
