@@ -112,6 +112,14 @@ namespace Arqs
                 _ => null,
             };
 
+        public static string AbbreviatedName(this IArg arg) =>
+            arg.Info switch
+            {
+                OptionArgInfo info => info.Names.AbbreviatedName,
+                FlagArgInfo info => info.Names.AbbreviatedName,
+                _ => null,
+            };
+
         public static string ValueName(this IArg arg) =>
             arg.Info switch
             {
