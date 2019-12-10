@@ -22,9 +22,32 @@ namespace Arqs
     using System.IO;
     using System.Linq;
     using System.Text;
+    using System.Threading.Tasks;
 
     public static class CommandLine
     {
+        public static IEntryPoint EntryPoint(EntryPointMode mode, Func<ImmutableArray<string>, int> main) =>
+            EntryPoint(mode, args => Task.FromResult(main(args)));
+
+        public static IEntryPoint EntryPoint(EntryPointMode mode, Func<ImmutableArray<string>, Task<int>> main) =>
+            new EntryPoint(mode, main);
+
+        public static int Run(string[] args, IArgBinder<IEntryPoint> binder) =>
+            RunAsync(args, binder).GetAwaiter().GetResult();
+
+        public static Task<int> RunAsync(string[] args, IArgBinder<IEntryPoint> binder)
+        {
+            var (command, tail) = binder.Bind(args);
+            switch (command.Mode)
+            {
+                case EntryPointMode.ShowHelp:
+                    binder.Describe(Console.Out);
+                    return Task.FromResult(0);
+                default:
+                    return command.Main(tail);
+            }
+        }
+
         static readonly string UnbundledValueReference = new string('*', 1);
 
         public static (T Result, ImmutableArray<string> Tail)
