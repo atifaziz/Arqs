@@ -24,8 +24,36 @@ namespace Arqs
     using System.Text;
     using System.Threading.Tasks;
 
+    public interface ICommand
+    {
+        string Name { get; }
+        string Description { get; }
+        Task<int> Main(ImmutableArray<string> args);
+    }
+
+    public sealed class Command : ICommand
+    {
+        readonly IArgBinder<IEntryPoint> _ep;
+
+        public Command(string name, string description, IArgBinder<IEntryPoint> ep)
+        {
+            _ep = ep;
+            Name = name;
+            Description = description;
+        }
+
+        public string Name { get; }
+        public string Description { get; }
+
+        public Task<int> Main(ImmutableArray<string> args) =>
+            CommandLine.RunAsync(args.ToArray(), _ep);
+    }
+
     public static class CommandLine
     {
+        public static ICommand Command(string name, string description, IArgBinder<IEntryPoint> entryPoint) =>
+            new Command(name, description, entryPoint);
+
         public static IEntryPoint EntryPoint(EntryPointMode mode, Action<ImmutableArray<string>> main) =>
             new EntryPoint(mode, args => { main(args); return Task.FromResult(0); });
 
@@ -51,6 +79,24 @@ namespace Arqs
                     return Task.FromResult(0);
                 default:
                     return command.Main(tail);
+            }
+        }
+
+        public static Task<int> RunAsync(string[] args, params ICommand[] commands)
+        {
+            var commandName = args.Length > 1 ? args.First() : null;
+            var command = commands.FirstOrDefault(cmd => cmd.Name == commandName);
+            if (command == null)
+            {
+                foreach (var cmd in commands)
+                {
+                    Console.WriteLine(cmd.Name);
+                }
+                return Task.FromResult(1);
+            }
+            else
+            {
+                return command.Main(args.Skip(1).ToImmutableArray());
             }
         }
 
