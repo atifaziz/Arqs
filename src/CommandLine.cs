@@ -301,33 +301,50 @@ namespace Arqs
                 sb.Clear();
                 sb.Append("  ");
 
-                var hasShortName = false;
-                if (arg.ShortName() is ShortOptionName shortName)
+                switch (arg.Info)
                 {
-                    hasShortName = true;
-                    sb.Append('-').Append(shortName);
-                }
-                else
-                {
-                    sb.Append("    ");
-                }
+                    case OperandArgInfo _:
+                    {
+                        sb.Append(arg.ValueName());
+                        break;
+                    }
+                    case IntegerOptionArgInfo _:
+                    {
+                        sb.Append('-').Append(arg.ValueName());
+                        break;
+                    }
+                    default:
+                    {
+                        var hasShortName = false;
+                        if (arg.ShortName() is ShortOptionName shortName)
+                        {
+                            hasShortName = true;
+                            sb.Append('-').Append(shortName);
+                        }
+                        else
+                        {
+                            sb.Append("    ");
+                        }
 
-                if (arg.LongName() is string longName)
-                {
-                    if (hasShortName)
-                        sb.Append(", ");
-                    sb.Append("--").Append(longName);
-                }
+                        if (arg.LongName() is string longName)
+                        {
+                            if (hasShortName)
+                                sb.Append(", ");
+                            sb.Append("--").Append(longName);
+                        }
 
-                if (arg.AbbreviatedName() is string abbreviatedName)
-                    sb.Append(", --").Append(abbreviatedName);
+                        if (arg.AbbreviatedName() is string abbreviatedName)
+                            sb.Append(", --").Append(abbreviatedName);
 
-                if (arg.ValueName() is string valueName)
-                {
-                    var optional = arg.Info is OptionArgInfo info && info.IsValueOptional;
-                    sb.Append(optional ? "[=" : " ")
-                      .Append(valueName)
-                      .Append(optional ? "]" : string.Empty);
+                        if (arg.ValueName() is string valueName)
+                        {
+                            var optional = arg.Info is OptionArgInfo info && info.IsValueOptional;
+                            sb.Append(optional ? "[=" : " ")
+                              .Append(valueName)
+                              .Append(optional ? "]" : string.Empty);
+                        }
+                        break;
+                    }
                 }
 
                 var written = sb.Length;
