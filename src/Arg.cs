@@ -243,29 +243,47 @@ namespace Arqs
         public static IArg<T, OptionArgInfo> Option<T>(OptionNames names, T @default, IParser<T> parser) =>
             Create(new OptionArgInfo(names), () => Accumulator.Value(parser, default(T), @default, (_, v) => v), r => r.Count > 0 ? r.GetResult() : @default);
 
-        public static IArg<int, IntegerOptionArgInfo> IntOpt(string name) =>
-            IntOpt(name, -1);
+        public static IArg<int, IntegerOptionArgInfo> IntOpt(string spec) =>
+            IntOpt(spec, -1);
 
-        public static IArg<int, IntegerOptionArgInfo> IntOpt(string name, int @default) =>
-            IntOpt(name, @default, Parser.Int32());
+        public static IArg<int, IntegerOptionArgInfo> IntOpt(string spec, int @default) =>
+            IntOpt(spec, @default, Parser.Int32());
 
-        public static IArg<int, IntegerOptionArgInfo> IntOpt(string name, IParser<int> parser) =>
-            IntOpt(name, default, parser);
+        public static IArg<int, IntegerOptionArgInfo> IntOpt(string spec, IParser<int> parser) =>
+            IntOpt(spec, default, parser);
 
-        public static IArg<int, IntegerOptionArgInfo> IntOpt(string name, int @default, IParser<int> parser) =>
-            Create(new IntegerOptionArgInfo(name), () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default);
+        public static IArg<int, IntegerOptionArgInfo> IntOpt(string spec, int @default, IParser<int> parser)
+        {
+            var (name, description) = SplitNameDescription(spec);
+            var info = new IntegerOptionArgInfo(name).WithDescription(description);
+            return Create(info, () => Accumulator.Value(parser),
+                          r => r.Count > 0 ? r.GetResult() : @default);
+        }
 
-        public static IArg<string, OperandArgInfo> Operand(string name) =>
-            Operand(name, null);
+        public static IArg<string, OperandArgInfo> Operand(string spec) =>
+            Operand(spec, null);
 
-        public static IArg<string, OperandArgInfo> Operand(string name, string @default) =>
-            Operand(name, @default, Parser.String());
+        public static IArg<string, OperandArgInfo> Operand(string spec, string @default) =>
+            Operand(spec, @default, Parser.String());
 
-        public static IArg<T, OperandArgInfo> Operand<T>(string name, IParser<T> parser) =>
-            Operand(name, default, parser);
+        public static IArg<T, OperandArgInfo> Operand<T>(string spec, IParser<T> parser) =>
+            Operand(spec, default, parser);
 
-        public static IArg<T, OperandArgInfo> Operand<T>(string name, T @default, IParser<T> parser) =>
-            Create(new OperandArgInfo(name), () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default);
+        public static IArg<T, OperandArgInfo> Operand<T>(string spec, T @default, IParser<T> parser)
+        {
+            var (name, description) = SplitNameDescription(spec);
+            var info = new OperandArgInfo(name).WithDescription(description);
+            return Create(info, () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default);
+        }
+
+        static (string Name, string Description) SplitNameDescription(string spec)
+        {
+            if (spec == null)
+                return default;
+            var tokens = spec.Split((char[]) null, 2, StringSplitOptions.RemoveEmptyEntries);
+            return (tokens[0].Length > 0 ? tokens[0] : null,
+                    tokens.Length > 1 && tokens[1].Length > 1 ? tokens[1] : null);
+        }
 
         public static IArg<ImmutableArray<T>, OperandArgInfo> List<T>(this IArg<T, OperandArgInfo> arg) =>
             List<T, OperandArgInfo>(arg);
