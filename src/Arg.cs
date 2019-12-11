@@ -249,10 +249,10 @@ namespace Arqs
         public static IArg<int, IntegerOptionArgInfo> IntOpt(string name, int @default) =>
             IntOpt(name, @default, Parser.Int32());
 
-        public static IArg<T, IntegerOptionArgInfo> IntOpt<T>(string name, IParser<T> parser) =>
+        public static IArg<int, IntegerOptionArgInfo> IntOpt(string name, IParser<int> parser) =>
             IntOpt(name, default, parser);
 
-        public static IArg<T, IntegerOptionArgInfo> IntOpt<T>(string name, T @default, IParser<T> parser) =>
+        public static IArg<int, IntegerOptionArgInfo> IntOpt(string name, int @default, IParser<int> parser) =>
             Create(new IntegerOptionArgInfo(name), () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default);
 
         public static IArg<T, OperandArgInfo> Operand<T>(string name, IParser<T> parser) =>
