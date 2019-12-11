@@ -43,14 +43,14 @@ namespace Arqs
 
         public static Task<int> RunAsync(string[] args, IArgBinder<IEntryPoint> binder)
         {
-            var (command, tail) = binder.Bind(args);
-            switch (command.Mode)
+            var (entryPoint, tail) = binder.Bind(args);
+            switch (entryPoint.Mode)
             {
                 case EntryPointMode.ShowHelp:
                     binder.Describe(Console.Out);
                     return Task.FromResult(0);
                 default:
-                    return command.Main(tail);
+                    return entryPoint.Main(tail);
             }
         }
 
