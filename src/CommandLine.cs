@@ -272,6 +272,13 @@ namespace Arqs
             }
         }
 
+        public static string Describe<T>(this IArgBinder<T> binder)
+        {
+            using var writer = new StringWriter();
+            Describe(binder, writer);
+            return writer.ToString();
+        }
+
         public static void Describe<T>(this IArgBinder<T> binder, TextWriter writer) =>
             Describe(binder.Inspect(), writer);
 

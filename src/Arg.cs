@@ -255,6 +255,12 @@ namespace Arqs
         public static IArg<int, IntegerOptionArgInfo> IntOpt(string name, int @default, IParser<int> parser) =>
             Create(new IntegerOptionArgInfo(name), () => Accumulator.Value(parser), r => r.Count > 0 ? r.GetResult() : @default);
 
+        public static IArg<string, OperandArgInfo> Operand(string name) =>
+            Operand(name, null);
+
+        public static IArg<string, OperandArgInfo> Operand(string name, string @default) =>
+            Operand(name, @default, Parser.String());
+
         public static IArg<T, OperandArgInfo> Operand<T>(string name, IParser<T> parser) =>
             Operand(name, default, parser);
 
