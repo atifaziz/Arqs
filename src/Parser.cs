@@ -209,8 +209,7 @@ namespace Arqs
             where choices.Contains(v, comparer)
             select v;
 
-        internal static readonly IParser<bool> BooleanPlusMinus =
-            Boolean("+", "-", StringComparison.Ordinal);
+        internal static readonly IParser<bool> BooleanPlusMinus = Boolean("+", "-");
 
         public static IParser<bool> Boolean(string trueString, string falseString) =>
             Boolean(trueString, falseString, StringComparison.Ordinal);

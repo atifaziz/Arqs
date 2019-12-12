@@ -185,7 +185,7 @@ namespace Arqs
 
         public static IArg<bool, FlagArgInfo> Flag(OptionNames names) =>
             Create(new FlagArgInfo(names),
-                   () => Accumulator.Value(Parser.Boolean("+", "-"), false, true, (_, v) => v),
+                   () => Accumulator.Value(Parser.BooleanPlusMinus, false, true, (_, v) => v),
                    r => r.Count > 0 && r.GetResult());
 
         public static IArg<int, FlagArgInfo> CountedFlag(string spec)
