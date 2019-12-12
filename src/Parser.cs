@@ -177,12 +177,12 @@ namespace Arqs
                                      : System.DateTime.TryParse(s, options.FormatProvider, options.Styles, out var v) ? ParseResult.Success(v) : default);
         }
 
-        public static IParser<int> Int32() => Parsers.Int32;
-        public static IParser<int> Int32(NumberStyles styles) => Parsers.Int32.WithOptions(Parsers.Int32.Options.WithStyles(styles));
-        public static IParser<double> Double() => Parsers.Double;
-        public static IParser<double> Double(NumberStyles styles) => Parsers.Double.WithOptions(Parsers.Int32.Options.WithStyles(styles));
-        public static IParser<DateTime> DateTime() => Parsers.DateTime;
-        public static IParser<DateTime> DateTime(string format) => Parsers.DateTime.WithOptions(Parsers.DateTime.Options.WithFormats(ImmutableArray.Create(format)));
+        public static IParser<int, NumberParseOptions> Int32() => Parsers.Int32;
+        public static IParser<int, NumberParseOptions> Int32(NumberStyles styles) => Parsers.Int32.WithOptions(Parsers.Int32.Options.WithStyles(styles));
+        public static IParser<double, NumberParseOptions> Double() => Parsers.Double;
+        public static IParser<double, NumberParseOptions> Double(NumberStyles styles) => Parsers.Double.WithOptions(Parsers.Int32.Options.WithStyles(styles));
+        public static IParser<DateTime, DateTimeParseOptions> DateTime() => Parsers.DateTime;
+        public static IParser<DateTime, DateTimeParseOptions> DateTime(string format) => Parsers.DateTime.WithOptions(Parsers.DateTime.Options.WithFormats(ImmutableArray.Create(format)));
         public static IParser<string> String() => Parsers.Id;
 
         public static IParser<string> Choose(params string[] choices) =>
