@@ -61,7 +61,7 @@ namespace Arqs
             parser.WithOptions(parser.Options.WithStyles(value));
 
         public static IParser<DateTime, DateTimeParseOptions> DateTime() => Parsers.DateTime;
-        public static IParser<DateTime, DateTimeParseOptions> DateTime(string format) => Parsers.DateTime.WithOptions(Parsers.DateTime.Options.WithFormats(ImmutableArray.Create(format)));
+        public static IParser<DateTime, DateTimeParseOptions> DateTime(string format) => Parsers.DateTime.Format(format);
 
         public static IParser<T, DateTimeParseOptions> FormatProvider<T>(this IParser<T, DateTimeParseOptions> parser, IFormatProvider value) =>
             parser.WithOptions(parser.Options.WithFormatProvider(value));
