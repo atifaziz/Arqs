@@ -21,6 +21,7 @@ namespace Arqs
     using System.Collections.Immutable;
     using System.Globalization;
     using System.Linq;
+    using System.Text.RegularExpressions;
     using static CaseSensitivity;
 
     partial class Parser
@@ -110,5 +111,42 @@ namespace Arqs
             from v in parser
             where v.CompareTo(min) >= 0 && v.CompareTo(max) <= 0
             select v;
+
+        public static IParser<IList<T>> Delimited<T>(this IParser<T> parser, char delimiter) =>
+            DelimitedList(delimiter).ParseList(parser);
+
+        public static IParser<IList<T>> PatternDelimited<T>(this IParser<T> parser, string pattern) =>
+            PatternDelimited(parser, pattern, RegexOptions.None);
+
+        public static IParser<IList<T>> PatternDelimited<T>(this IParser<T> parser, string pattern, RegexOptions options) =>
+            PatternDelimitedList(pattern, options).ParseList(parser);
+
+        static IParser<IList<T>> ParseList<T>(this IParser<IList<string>> stringsParser, IParser<T> parser) =>
+            Create(s =>
+            {
+                if (!(stringsParser.Parse(s) is (true, var strings)))
+                    return default;
+
+                var list = new List<T>(strings.Count);
+                foreach (var str in strings)
+                {
+                    if (!(parser.Parse(str) is (true, var v)))
+                        return default;
+                    list.Add(v);
+                }
+
+                return ParseResult.Success((IList<T>)list);
+            });
+
+        static IParser<IList<string>> DelimitedList(char delimiter) =>
+            from s in String()
+            select (IList<string>)s.Split(new[] { delimiter }, StringSplitOptions.RemoveEmptyEntries);
+
+        static IParser<IList<string>> PatternDelimitedList(string pattern) =>
+            PatternDelimitedList(pattern, RegexOptions.None);
+
+        static IParser<IList<string>> PatternDelimitedList(string pattern, RegexOptions options) =>
+            from s in String()
+            select (IList<string>)Regex.Split(s, pattern, options).Where(s => s.Length > 0).ToList();
     }
 }
