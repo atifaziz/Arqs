@@ -75,18 +75,8 @@ namespace Arqs
         public static IParser<string> Choose(params string[] choices) =>
             String().Choose(StringComparer.Ordinal, choices);
 
-        public static IParser<string> Choose(StringComparison comparison, params string[] choices) =>
-            String().Choose(comparison switch
-                            {
-                                StringComparison.CurrentCulture             => StringComparer.CurrentCulture,
-                                StringComparison.CurrentCultureIgnoreCase   => StringComparer.CurrentCultureIgnoreCase,
-                                StringComparison.InvariantCulture           => StringComparer.InvariantCulture,
-                                StringComparison.InvariantCultureIgnoreCase => StringComparer.InvariantCultureIgnoreCase,
-                                StringComparison.Ordinal                    => StringComparer.Ordinal,
-                                StringComparison.OrdinalIgnoreCase          => StringComparer.OrdinalIgnoreCase,
-                                _ => throw new ArgumentOutOfRangeException(nameof(comparison), comparison, null),
-                            },
-                            choices);
+        public static IParser<string> Choose(CaseSensitivity caseSensitivity, params string[] choices) =>
+            String().Choose(caseSensitivity.ToStringComparer(), choices);
 
         public static IParser<T> Choose<T>(this IParser<T> parser, params T[] choices) =>
             parser.Choose(EqualityComparer<T>.Default, choices);

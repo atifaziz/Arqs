@@ -76,7 +76,7 @@ namespace Arqs
     public static partial class Parser
     {
         public static IParser<T> Return<T>(T value) => Create(_ => ParseResult.Success(value));
-        
+
         public static IParser<T> Cast<T>(this IParser parser) =>
             Create(s => parser.Parse(s) is (true, var v) ? ParseResult.Success((T)v) : default);
 
