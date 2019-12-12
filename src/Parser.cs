@@ -179,13 +179,31 @@ namespace Arqs
 
         public static IParser<T> Return<T>(T value) => Create(_ => ParseResult.Success(value));
 
+        public static IParser<string> String() => Parsers.Id;
+
         public static IParser<int, NumberParseOptions> Int32() => Parsers.Int32;
         public static IParser<int, NumberParseOptions> Int32(NumberStyles styles) => Parsers.Int32.WithOptions(Parsers.Int32.Options.WithStyles(styles));
+
         public static IParser<double, NumberParseOptions> Double() => Parsers.Double;
         public static IParser<double, NumberParseOptions> Double(NumberStyles styles) => Parsers.Double.WithOptions(Parsers.Int32.Options.WithStyles(styles));
+
+        public static IParser<T> FormatProvider<T>(this IParser<T, NumberParseOptions> parser, IFormatProvider value) =>
+            parser.WithOptions(parser.Options.WithFormatProvider(value));
+
+        public static IParser<T> Styles<T>(this IParser<T, NumberParseOptions> parser, NumberStyles value) =>
+            parser.WithOptions(parser.Options.WithStyles(value));
+
         public static IParser<DateTime, DateTimeParseOptions> DateTime() => Parsers.DateTime;
         public static IParser<DateTime, DateTimeParseOptions> DateTime(string format) => Parsers.DateTime.WithOptions(Parsers.DateTime.Options.WithFormats(ImmutableArray.Create(format)));
-        public static IParser<string> String() => Parsers.Id;
+
+        public static IParser<T> FormatProvider<T>(this IParser<T, DateTimeParseOptions> parser, IFormatProvider value) =>
+            parser.WithOptions(parser.Options.WithFormatProvider(value));
+
+        public static IParser<T> Styles<T>(this IParser<T, DateTimeParseOptions> parser, DateTimeStyles value) =>
+            parser.WithOptions(parser.Options.WithStyles(value));
+
+        public static IParser<T> Format<T>(this IParser<T, DateTimeParseOptions> parser, string[] value) =>
+            parser.WithOptions(parser.Options.WithFormats(value.ToImmutableArray()));
 
         public static IParser<string> Choose(params string[] choices) =>
             String().Choose(StringComparer.Ordinal, choices);
