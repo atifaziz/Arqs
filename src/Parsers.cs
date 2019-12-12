@@ -21,6 +21,7 @@ namespace Arqs
     using System.Collections.Immutable;
     using System.Globalization;
     using System.Linq;
+    using static CaseSensitivity;
 
     partial class Parser
     {
@@ -89,12 +90,15 @@ namespace Arqs
         internal static readonly IParser<bool> BooleanPlusMinus = Boolean("+", "-");
 
         public static IParser<bool> Boolean(string trueString, string falseString) =>
-            Boolean(trueString, falseString, StringComparison.Ordinal);
+            Boolean(trueString, falseString, CaseSensitive);
 
-        public static IParser<bool> Boolean(string trueString, string falseString, StringComparison comparison) =>
-            Create(s => string.Equals(s, trueString, comparison) ? ParseResult.Success(true)
-                      : string.Equals(s, falseString, comparison) ? ParseResult.Success(false)
-                      : default);
+        public static IParser<bool> Boolean(string trueString, string falseString, CaseSensitivity caseSensitivity)
+        {
+            var comparison = caseSensitivity.ToStringComparison();
+            return Create(s => string.Equals(s, trueString, comparison) ? ParseResult.Success(true)
+                             : string.Equals(s, falseString, comparison) ? ParseResult.Success(false)
+                             : default);
+        }
 
         public static IParser<string> Literal(string value) =>
             Literal(value, StringComparison.Ordinal);
