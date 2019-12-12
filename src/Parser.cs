@@ -177,6 +177,8 @@ namespace Arqs
                                      : System.DateTime.TryParse(s, options.FormatProvider, options.Styles, out var v) ? ParseResult.Success(v) : default);
         }
 
+        public static IParser<T> Return<T>(T value) => Create(_ => ParseResult.Success(value));
+
         public static IParser<int, NumberParseOptions> Int32() => Parsers.Int32;
         public static IParser<int, NumberParseOptions> Int32(NumberStyles styles) => Parsers.Int32.WithOptions(Parsers.Int32.Options.WithStyles(styles));
         public static IParser<double, NumberParseOptions> Double() => Parsers.Double;
