@@ -69,7 +69,7 @@ namespace Arqs
         public static IParser<T> Styles<T>(this IParser<T, DateTimeParseOptions> parser, DateTimeStyles value) =>
             parser.WithOptions(parser.Options.WithStyles(value));
 
-        public static IParser<T> Format<T>(this IParser<T, DateTimeParseOptions> parser, string[] value) =>
+        public static IParser<T> Format<T>(this IParser<T, DateTimeParseOptions> parser, params string[] value) =>
             parser.WithOptions(parser.Options.WithFormats(value.ToImmutableArray()));
 
         public static IParser<string> Choose(params string[] choices) =>
