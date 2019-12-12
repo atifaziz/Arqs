@@ -29,9 +29,11 @@ namespace Arqs
         static ShortOptionName()
         {
             Cache = new ShortOptionName['z' + 1];
+
             InitCacheRange('0', '9');
             InitCacheRange('A', 'Z');
             InitCacheRange('a', 'z');
+            InitCacheRange('?', '?');
 
             static void InitCacheRange(char first, char last)
             {
@@ -41,14 +43,16 @@ namespace Arqs
         }
 
         static ArgumentOutOfRangeException InvalidNameError(char ch) =>
-            new ArgumentOutOfRangeException(nameof(ch), ch, "Short name must be a digit or a lowercase or uppercase ASCII letter.");
+            new ArgumentOutOfRangeException(nameof(ch), ch,
+                "Short name must be a digit, question mark (?) " +
+                "or a lowercase or uppercase ASCII letter.");
 
         public static ShortOptionName Parse(char ch) =>
             TryParse(ch, out var name) ? name : throw InvalidNameError(ch);
 
         public static bool TryParse(char ch, out ShortOptionName value)
         {
-            if (!IsLetterOrDigit(ch))
+            if (!IsCharValid(ch))
             {
                 value = default;
                 return false;
@@ -59,12 +63,15 @@ namespace Arqs
         }
 
         ShortOptionName(char ch) =>
-            _ld = IsLetterOrDigit(ch)
+            _ld = IsCharValid(ch)
                 ? ch.ToString()
                 : throw InvalidNameError(ch);
 
-        static bool IsLetterOrDigit(char ch) =>
-            ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9';
+        static bool IsCharValid(char ch)
+            => ch >= 'A' && ch <= 'Z'
+            || ch >= 'a' && ch <= 'z'
+            || ch >= '0' && ch <= '9'
+            || ch == '?';
 
         public bool Equals(ShortOptionName other) =>
             !ReferenceEquals(null, other) &&
