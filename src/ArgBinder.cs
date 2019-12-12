@@ -40,6 +40,9 @@ namespace Arqs
         public static IArgBinder<T> Create<T>(Func<Func<IAccumulator>, T> binder, Func<IEnumerable<IInspectionRecord>> inspector) =>
             new DelegatingArgBinder<T>(binder, inspector);
 
+        public static IArgBinder<T> Return<T>(T value) =>
+            Create(_ => value, Enumerable.Empty<IInspectionRecord>);
+
         public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
             Create(bindings => f(binder.Bind(bindings)), binder.Inspect);
 
