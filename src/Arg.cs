@@ -285,9 +285,6 @@ namespace Arqs
                     tokens.Length > 1 && tokens[1].Length > 1 ? tokens[1] : null);
         }
 
-        public static IArg<ImmutableArray<T>, OperandArgInfo> List<T>(this IArg<T, OperandArgInfo> arg) =>
-            List<T, OperandArgInfo>(arg);
-
         public static IArg<ImmutableArray<T>, OptionArgInfo> List<T>(this IArg<T, OptionArgInfo> arg) =>
             List<T, OptionArgInfo>(arg);
 
