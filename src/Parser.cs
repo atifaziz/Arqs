@@ -86,10 +86,7 @@ namespace Arqs
         public GlobalParseOptions WithFormatProvider(IFormatProvider value) =>
             Update(value);
 
-        public GlobalParseOptions Update(IFormatProvider formatProvider) =>
-            UpdateCore(formatProvider);
-
-        protected virtual GlobalParseOptions UpdateCore(IFormatProvider formatProvider) =>
+        protected virtual GlobalParseOptions Update(IFormatProvider formatProvider) =>
             formatProvider == FormatProvider ? this : new GlobalParseOptions(formatProvider);
     }
 
@@ -106,14 +103,11 @@ namespace Arqs
         public new NumberParseOptions WithFormatProvider(IFormatProvider value) =>
             Update(Styles, value);
 
-        public NumberParseOptions Update(NumberStyles styles, IFormatProvider formatProvider) =>
-            UpdateCore(styles, formatProvider);
+        protected override GlobalParseOptions Update(IFormatProvider formatProvider) =>
+            Update(Styles, formatProvider);
 
-        protected virtual NumberParseOptions UpdateCore(NumberStyles styles, IFormatProvider formatProvider) =>
+        protected virtual NumberParseOptions Update(NumberStyles styles, IFormatProvider formatProvider) =>
             new NumberParseOptions(styles, formatProvider);
-
-        protected override GlobalParseOptions UpdateCore(IFormatProvider formatProvider) =>
-            UpdateCore(Styles, formatProvider);
     }
 
     public class DateTimeParseOptions : GlobalParseOptions
@@ -143,14 +137,11 @@ namespace Arqs
         public new DateTimeParseOptions WithFormatProvider(IFormatProvider value) =>
             Update(Formats, Styles, value);
 
-        public DateTimeParseOptions Update(ImmutableArray<string> formats, DateTimeStyles styles, IFormatProvider formatProvider) =>
-            UpdateCore(formats, styles, formatProvider);
+        protected override GlobalParseOptions Update(IFormatProvider formatProvider) =>
+            Update(Formats, Styles, formatProvider);
 
-        protected virtual DateTimeParseOptions UpdateCore(ImmutableArray<string> formats, DateTimeStyles styles, IFormatProvider formatProvider) =>
+        protected virtual DateTimeParseOptions Update(ImmutableArray<string> formats, DateTimeStyles styles, IFormatProvider formatProvider) =>
             new DateTimeParseOptions(formats, styles, formatProvider);
-
-        protected override GlobalParseOptions UpdateCore(IFormatProvider formatProvider) =>
-            UpdateCore(Formats, Styles, formatProvider);
 
         internal ParseResult<DateTime> ParseFormatted(string s) =>
             DateTime.TryParseExact(s, CachedFormatsArray, FormatProvider, Styles, out var v) ? ParseResult.Success(v) : default;
