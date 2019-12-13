@@ -203,7 +203,7 @@ namespace Arqs
                 {
                     var i = specs.FindIndex(e => name switch
                     {
-                        (string ln, null) => e.LongName() == ln,
+                        (string ln, null) => e.LongName() == ln || e.AbbreviatedName() == ln,
                         (null, ShortOptionName sn) => e.ShortName() == sn,
                         _ => false,
                     });
