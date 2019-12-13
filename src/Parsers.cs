@@ -41,8 +41,8 @@ namespace Arqs
             public static readonly IParser<DateTime, DateTimeParseOptions> DateTime =
                 Create(new DateTimeParseOptions(ImmutableArray<string>.Empty, DateTimeStyles.None, CultureInfo.InvariantCulture),
                        (s, options) => options.Formats.IsDefaultOrEmpty
-                                     ? options.ParseFormatted(s)
-                                     : System.DateTime.TryParse(s, options.FormatProvider, options.Styles, out var v) ? ParseResult.Success(v) : default);
+                                     ? System.DateTime.TryParse(s, options.FormatProvider, options.Styles, out var v) ? ParseResult.Success(v) : default
+                                     : options.ParseFormatted(s));
         }
 
         public static IParser<string> String() => Parsers.Id;
