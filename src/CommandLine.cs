@@ -54,10 +54,42 @@ namespace Arqs
             }
         }
 
+        public static Command Command(string name, IArgBinder<IEntryPoint> binder) =>
+            new Command(ImmutableArray.Create(name.Split((char[])null, StringSplitOptions.RemoveEmptyEntries)), null, binder);
+
+        public static int Run(IEnumerable<string> args, IArgBinder<IEntryPoint> @default, params Command[] commands) =>
+            RunAsync(args, @default, commands).GetAwaiter().GetResult();
+
+        public static Task<int> RunAsync(IEnumerable<string> args, IArgBinder<IEntryPoint> @default, params Command[] commands)
+        {
+            using var arg = args.GetEnumerator();
+
+            if (!arg.MoveNext())
+            {
+                foreach (var command in commands)
+                    Console.WriteLine(string.Join(" ", command.Literals));
+
+                return Task.FromResult(0);
+            }
+
+            var (count, binder) =
+                commands.OrderByDescending(cmd => cmd.Literals.Length)
+                        .Where(cmd => cmd.Literals.SequenceEqual(args.Take(cmd.Literals.Length)))
+                        .Select(cmd => (cmd.Literals.Length, cmd.Binder))
+                        .DefaultIfEmpty((0, @default))
+                        .First();
+
+            return RunAsync(args.Skip(count).ToArray(), binder);
+        }
+
         static readonly string UnbundledValueReference = new string('*', 1);
 
         public static (T Result, ImmutableArray<string> Tail)
-            Bind<T>(this IArgBinder<T> binder, params string[] args)
+            Bind<T>(this IArgBinder<T> binder, params string[] args) =>
+            binder.Bind(args.AsEnumerable());
+
+        public static (T Result, ImmutableArray<string> Tail)
+            Bind<T>(this IArgBinder<T> binder, IEnumerable<string> args)
         {
             var specs = binder.GetArgs().ToList();
 
