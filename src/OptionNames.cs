@@ -29,6 +29,7 @@ namespace Arqs
             InitShortNamesCacheRange('0', '9');
             InitShortNamesCacheRange('A', 'Z');
             InitShortNamesCacheRange('a', 'z');
+            InitShortNamesCacheRange('?', '?');
 
             static void InitShortNamesCacheRange(char first, char last)
             {
