@@ -7,7 +7,9 @@ namespace Arqs.Sample
         static int Main(string[] args) =>
             CommandLine.Run(args,
 
-                from h   in Arg.Flag  ("h|help                     print this summary")
+                from usg in Help.Text("usage: git commit [<options>] <pathspec>...", string.Empty)
+
+                join h   in Arg.Flag  ("h|help                     print this summary") on 1 equals 1
                 join q   in Arg.Flag  ("q|quiet                    suppress summary after successful commit") on 1 equals 1
                 join v   in Arg.Flag  ("v|verbose                  show diff in commit message template") on 1 equals 1
                 join dbg in Arg.Flag  ("d|debug                    debug program").Visibility(Visibility.Hidden) on 1 equals 1
