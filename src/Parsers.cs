@@ -102,10 +102,10 @@ namespace Arqs
         }
 
         public static IParser<string> Literal(string value) =>
-            Literal(value, StringComparison.Ordinal);
+            Literal(value, CaseSensitive);
 
-        public static IParser<string> Literal(string value, StringComparison comparison) =>
-            Create(s => string.Equals(s, value, comparison) ? ParseResult.Success(s) : default);
+        public static IParser<string> Literal(string value, CaseSensitivity caseSensitivity) =>
+            Create(s => string.Equals(s, value, caseSensitivity.ToStringComparison()) ? ParseResult.Success(s) : default);
 
         public static IParser<T> Range<T>(this IParser<T> parser, T min, T max) where T : IComparable<T> =>
             from v in parser
