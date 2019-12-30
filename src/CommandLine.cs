@@ -38,29 +38,29 @@ namespace Arqs
         public static IEntryPoint EntryPoint(EntryPointMode mode, Func<ImmutableArray<string>, Task<int>> main) =>
             new EntryPoint(mode, main);
 
-        public static int Run(string[] args, IArgBinder<IEntryPoint> binder) =>
-            RunAsync(args, binder).GetAwaiter().GetResult();
+        public static int Run(string[] args, ICli<IEntryPoint> cli) =>
+            RunAsync(args, cli).GetAwaiter().GetResult();
 
-        public static Task<int> RunAsync(string[] args, IArgBinder<IEntryPoint> binder)
+        public static Task<int> RunAsync(string[] args, ICli<IEntryPoint> cli)
         {
-            var (entryPoint, tail) = binder.Bind(args);
+            var (entryPoint, tail) = cli.Bind(args);
             switch (entryPoint.Mode)
             {
                 case EntryPointMode.ShowHelp:
-                    binder.Describe(Console.Out);
+                    cli.Describe(Console.Out);
                     return Task.FromResult(0);
                 default:
                     return entryPoint.Main(tail);
             }
         }
 
-        public static Command Command(string name, IArgBinder<IEntryPoint> binder) =>
-            new Command(ImmutableArray.Create(name.Split((char[])null, StringSplitOptions.RemoveEmptyEntries)), null, binder);
+        public static Command Command(string name, ICli<IEntryPoint> cli) =>
+            new Command(ImmutableArray.Create(name.Split((char[])null, StringSplitOptions.RemoveEmptyEntries)), null, cli);
 
-        public static int Run(IEnumerable<string> args, IArgBinder<IEntryPoint> @default, params Command[] commands) =>
+        public static int Run(IEnumerable<string> args, ICli<IEntryPoint> @default, params Command[] commands) =>
             RunAsync(args, @default, commands).GetAwaiter().GetResult();
 
-        public static Task<int> RunAsync(IEnumerable<string> args, IArgBinder<IEntryPoint> @default, params Command[] commands)
+        public static Task<int> RunAsync(IEnumerable<string> args, ICli<IEntryPoint> @default, params Command[] commands)
         {
             using var arg = args.GetEnumerator();
 
@@ -72,26 +72,26 @@ namespace Arqs
                 return Task.FromResult(0);
             }
 
-            var (count, binder) =
+            var (count, cli) =
                 commands.OrderByDescending(cmd => cmd.Literals.Length)
                         .Where(cmd => cmd.Literals.SequenceEqual(args.Take(cmd.Literals.Length)))
-                        .Select(cmd => (cmd.Literals.Length, cmd.Binder))
+                        .Select(cmd => (cmd.Literals.Length, Binder: cmd.Cli))
                         .DefaultIfEmpty((0, @default))
                         .First();
 
-            return RunAsync(args.Skip(count).ToArray(), binder);
+            return RunAsync(args.Skip(count).ToArray(), cli);
         }
 
         static readonly string UnbundledValueReference = new string('*', 1);
 
         public static (T Result, ImmutableArray<string> Tail)
-            Bind<T>(this IArgBinder<T> binder, params string[] args) =>
-            binder.Bind(args.AsEnumerable());
+            Bind<T>(this ICli<T> cli, params string[] args) =>
+            cli.Bind(args.AsEnumerable());
 
         public static (T Result, ImmutableArray<string> Tail)
-            Bind<T>(this IArgBinder<T> binder, IEnumerable<string> args)
+            Bind<T>(this ICli<T> cli, IEnumerable<string> args)
         {
-            var specs = binder.GetArgs().ToList();
+            var specs = cli.GetArgs().ToList();
 
             var accumulators = new IAccumulator[specs.Count];
             for (var i = 0; i < specs.Count; i++)
@@ -291,7 +291,7 @@ namespace Arqs
             }
 
             var ar = accumulators.Read();
-            return (binder.Bind(() => ar.Read()), tail.ToImmutableArray());
+            return (cli.Bind(() => ar.Read()), tail.ToImmutableArray());
 
             static bool IsDigital(string s, int start, int end)
             {
@@ -304,17 +304,17 @@ namespace Arqs
             }
         }
 
-        public static string Describe<T>(this IArgBinder<T> binder)
+        public static string Describe<T>(this ICli<T> cli)
         {
             using var writer = new StringWriter();
-            Describe(binder, writer);
+            Describe(cli, writer);
             return writer.ToString();
         }
 
-        public static void Describe<T>(this IArgBinder<T> binder, TextWriter writer) =>
-            Describe(binder.Inspect(), writer);
+        public static void Describe<T>(this ICli<T> cli, TextWriter writer) =>
+            Describe(cli.Inspect(), writer);
 
-        static void Describe(IEnumerable<IInspectionRecord> records, TextWriter writer)
+        static void Describe(IEnumerable<ICliRecord> records, TextWriter writer)
         {
             var sb = new StringBuilder();
 

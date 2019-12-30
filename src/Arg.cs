@@ -21,21 +21,21 @@ namespace Arqs
     using System.Collections.Immutable;
     using System.Linq;
 
-    public interface IArg : IArgBinder
+    public interface IArg : ICli
     {
         IArgInfo Info { get; }
         IArg WithInfo(IArgInfo value);
         IAccumulator CreateAccumulator();
     }
 
-    public interface IArg<out T, TInfo> : IArg, IArgBinder<T> where TInfo : IArgInfo
+    public interface IArg<out T, TInfo> : IArg, ICli<T> where TInfo : IArgInfo
     {
         new TInfo Info { get; }
         IArg<T, TInfo> WithInfo(TInfo value);
         new IAccumulator<T> CreateAccumulator();
     }
 
-    sealed class Arg<T, TInfo> : IArg<T, TInfo>, IInspectionRecord where TInfo : IArgInfo
+    sealed class Arg<T, TInfo> : IArg<T, TInfo>, ICliRecord where TInfo : IArgInfo
     {
         readonly Func<IAccumulator<T>> _accumulatorFactory;
         readonly Func<IAccumulator<T>, T> _binder;
@@ -60,14 +60,14 @@ namespace Arqs
 
         public IAccumulator<T> CreateAccumulator() => _accumulatorFactory();
 
-        object IArgBinder.Bind(Func<IAccumulator> source) => Bind(source);
+        object ICli.Bind(Func<IAccumulator> source) => Bind(source);
 
         public T Bind(Func<IAccumulator> source) =>
             _binder((IAccumulator<T>)source());
 
-        public IEnumerable<IInspectionRecord> Inspect() { yield return this; }
+        public IEnumerable<ICliRecord> Inspect() { yield return this; }
 
-        T1 IInspectionRecord.Match<T1>(Func<IArg, T1> argSelector, Func<string, T1> textSelector) =>
+        T1 ICliRecord.Match<T1>(Func<IArg, T1> argSelector, Func<string, T1> textSelector) =>
             argSelector(this);
     }
 

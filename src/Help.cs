@@ -22,23 +22,23 @@ namespace Arqs
 
     public static class Help
     {
-        public static readonly IArgBinder<string> BlankLine = CreateText(string.Empty);
+        public static readonly ICli<string> BlankLine = CreateText(string.Empty);
 
-        public static IArgBinder<string> Text(string line) =>
+        public static ICli<string> Text(string line) =>
             string.IsNullOrEmpty(line) ? BlankLine : CreateText(line);
 
-        static IArgBinder<string> CreateText(string line)
+        static ICli<string> CreateText(string line)
         {
-            IEnumerable<IInspectionRecord> singleton = ImmutableArray.Create(InspectionRecord.Text(line));
-            return ArgBinder.Create(_ => line, () => singleton);
+            IEnumerable<ICliRecord> singleton = ImmutableArray.Create(CliRecord.Text(line));
+            return Cli.Create(_ => line, () => singleton);
         }
 
-        public static IArgBinder<ImmutableArray<string>> Text(params string[] lines)
+        public static ICli<ImmutableArray<string>> Text(params string[] lines)
         {
-            IEnumerable<IInspectionRecord> rs = null;
-            return ArgBinder.Create(_ => ImmutableArray.Create(lines),
+            IEnumerable<ICliRecord> rs = null;
+            return Cli.Create(_ => ImmutableArray.Create(lines),
                 () => rs ??= from line in lines
-                    select InspectionRecord.Text(line));
+                    select CliRecord.Text(line));
         }
     }
 }

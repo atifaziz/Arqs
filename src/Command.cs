@@ -22,15 +22,15 @@ namespace Arqs
     {
         public Command(ImmutableArray<string> literals,
                        string description,
-                       IArgBinder<IEntryPoint> binder)
+                       ICli<IEntryPoint> cli)
         {
             Literals = literals;
-            Binder = binder;
+            Cli = cli;
             Description = description;
         }
 
         public ImmutableArray<string> Literals { get; }
         public string Description { get; }
-        public IArgBinder<IEntryPoint> Binder { get; }
+        public ICli<IEntryPoint> Cli { get; }
     }
 }

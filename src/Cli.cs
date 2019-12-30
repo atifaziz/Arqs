@@ -20,73 +20,73 @@ namespace Arqs
     using System.Collections.Generic;
     using System.Linq;
 
-    public interface IArgBinder
+    public interface ICli
     {
         object Bind(Func<IAccumulator> source);
-        IEnumerable<IInspectionRecord> Inspect();
+        IEnumerable<ICliRecord> Inspect();
     }
 
-    public interface IArgBinder<out T> : IArgBinder
+    public interface ICli<out T> : ICli
     {
         new T Bind(Func<IAccumulator> source);
     }
 
-    public static class ArgBinder
+    public static class Cli
     {
-        public static IArgBinder<(T, U)> Zip<T, U>(this IArgBinder<T> first, IArgBinder<U> second) =>
+        public static ICli<(T, U)> Zip<T, U>(this ICli<T> first, ICli<U> second) =>
             Create(bindings => (first.Bind(bindings), second.Bind(bindings)),
                    () => first.Inspect().Concat(second.Inspect()));
 
-        public static IArgBinder<T> Create<T>(Func<Func<IAccumulator>, T> binder, Func<IEnumerable<IInspectionRecord>> inspector) =>
-            new DelegatingArgBinder<T>(binder, inspector);
+        public static ICli<T> Create<T>(Func<Func<IAccumulator>, T> binder, Func<IEnumerable<ICliRecord>> inspector) =>
+            new DelegatingCli<T>(binder, inspector);
 
-        public static IArgBinder<T> Return<T>(T value) =>
-            Create(_ => value, Enumerable.Empty<IInspectionRecord>);
+        public static ICli<T> Return<T>(T value) =>
+            Create(_ => value, Enumerable.Empty<ICliRecord>);
 
-        public static IArgBinder<U> Select<T, U>(this IArgBinder<T> binder, Func<T, U> f) =>
-            Create(bindings => f(binder.Bind(bindings)), binder.Inspect);
+        public static ICli<U> Select<T, U>(this ICli<T> cli, Func<T, U> f) =>
+            Create(bindings => f(cli.Bind(bindings)), cli.Inspect);
 
-        public static IArgBinder<U> SelectMany<T, U>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f) =>
-            Create(bindings => f(binder.Bind(bindings)).Bind(bindings),
-                   () => binder.Inspect().Concat(f(default).Inspect()));
+        public static ICli<U> SelectMany<T, U>(this ICli<T> cli, Func<T, ICli<U>> f) =>
+            Create(bindings => f(cli.Bind(bindings)).Bind(bindings),
+                   () => cli.Inspect().Concat(f(default).Inspect()));
 
-        public static IArgBinder<V> SelectMany<T, U, V>(this IArgBinder<T> binder, Func<T, IArgBinder<U>> f, Func<T, U, V> g) =>
+        public static ICli<V> SelectMany<T, U, V>(this ICli<T> cli, Func<T, ICli<U>> f, Func<T, U, V> g) =>
             Create(bindings =>
                 {
-                    var a = binder.Bind(bindings);
+                    var a = cli.Bind(bindings);
                     return g(a, f(a).Bind(bindings));
                 },
                 () =>
                 {
-                    var a = binder.Inspect();
+                    var a = cli.Inspect();
                     return a.Concat(f(default).Inspect());
                 });
 
-        public static IArgBinder<V> Join<T, U, K, V>(this IArgBinder<T> first, IArgBinder<U> second,
+        public static ICli<V> Join<T, U, K, V>(this ICli<T> first, ICli<U> second,
             Func<T, K> unused1, Func<T, K> unused2,
             Func<T, U, V> resultSelector) =>
             from ab in first.Zip(second)
             select resultSelector(ab.Item1, ab.Item2);
 
-        sealed class DelegatingArgBinder<T> : IArgBinder<T>
+        sealed class DelegatingCli<T> : ICli<T>
         {
             readonly Func<Func<IAccumulator>, T> _binder;
-            readonly Func<IEnumerable<IInspectionRecord>> _inspector;
+            readonly Func<IEnumerable<ICliRecord>> _inspector;
 
-            public DelegatingArgBinder(Func<Func<IAccumulator>, T> binder,
-                                       Func<IEnumerable<IInspectionRecord>> inspector)
+            public DelegatingCli(Func<Func<IAccumulator>, T> binder,
+                                 Func<IEnumerable<ICliRecord>> inspector)
             {
                 _binder = binder;
                 _inspector = inspector;
             }
 
-            object IArgBinder.Bind(Func<IAccumulator> source) =>
+            object ICli.Bind(Func<IAccumulator> source) =>
                 Bind(source);
 
             public T Bind(Func<IAccumulator> source) =>
                 _binder(source);
 
-            public IEnumerable<IInspectionRecord> Inspect() =>
+            public IEnumerable<ICliRecord> Inspect() =>
                 _inspector();
         }
     }

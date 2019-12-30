@@ -20,31 +20,31 @@ namespace Arqs
     using System.Collections.Generic;
     using System.Linq;
 
-    public interface IInspectionRecord
+    public interface ICliRecord
     {
         T Match<T>(Func<IArg, T> argSelector,
                    Func<string, T> textSelector);
     }
 
-    public static class InspectionRecord
+    public static class CliRecord
     {
-        static readonly IInspectionRecord BlankText = new TextInspectionRecord(string.Empty);
+        static readonly ICliRecord BlankText = new TextCliRecord(string.Empty);
 
-        public static IInspectionRecord Text(string text) =>
-            string.IsNullOrEmpty(text) ? BlankText : new TextInspectionRecord(text);
+        public static ICliRecord Text(string text) =>
+            string.IsNullOrEmpty(text) ? BlankText : new TextCliRecord(text);
 
-        sealed class TextInspectionRecord : IInspectionRecord
+        sealed class TextCliRecord : ICliRecord
         {
             readonly string _text;
 
-            public TextInspectionRecord(string text) => _text = text;
+            public TextCliRecord(string text) => _text = text;
 
             public T Match<T>(Func<IArg, T> argSelector, Func<string, T> textSelector) =>
                 textSelector(_text);
         }
 
-        public static IEnumerable<IArg> GetArgs(this IArgBinder binder) =>
-            from ir in binder.Inspect()
+        public static IEnumerable<IArg> GetArgs(this ICli cli) =>
+            from ir in cli.Inspect()
             select ir.Match(arg => arg, _ => null) into arg
             where arg != null
             select arg;
