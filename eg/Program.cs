@@ -9,11 +9,11 @@ namespace Arqs.Sample
 
                 from h   in Arg.Flag  ("h|help                     print this summary")
                 join q   in Arg.Flag  ("q|quiet                    suppress summary after successful commit") on 1 equals 1
+                join v   in Arg.Flag  ("v|verbose                  show diff in commit message template") on 1 equals 1
                 join dbg in Arg.Flag  ("d|debug                    debug program").Visibility(Visibility.Hidden) on 1 equals 1
 
                 join cmo in Help.Text (string.Empty, "Commit message options") on 1 equals 1
 
-                join v   in Arg.Flag  ("v|verbose                  show diff in commit message template") on 1 equals 1
                 join f   in Arg.Option("F|file=<file>              read message from file") on 1 equals 1
                 join a   in Arg.Option("author=<author>            override author for commit") on 1 equals 1
                 join d   in Arg.Option("date=<date>                override date for commit", Parser.DateTime().Nullable()) on 1 equals 1
