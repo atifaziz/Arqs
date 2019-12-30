@@ -35,8 +35,6 @@ namespace Arqs.Tests
             Assert.That(success, Is.EqualTo(expectedSuccess));
             Assert.That(value.ToString("s"), Is.EqualTo(expectedValue));
         }
-
-       
     }
 
     public class Int32
