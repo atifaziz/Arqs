@@ -46,22 +46,6 @@ namespace Arqs
         public static ICli<U> Select<T, U>(this ICli<T> cli, Func<T, U> f) =>
             Create(bindings => f(cli.Bind(bindings)), cli.Inspect);
 
-        public static ICli<U> SelectMany<T, U>(this ICli<T> cli, Func<T, ICli<U>> f) =>
-            Create(bindings => f(cli.Bind(bindings)).Bind(bindings),
-                   () => cli.Inspect().Concat(f(default).Inspect()));
-
-        public static ICli<V> SelectMany<T, U, V>(this ICli<T> cli, Func<T, ICli<U>> f, Func<T, U, V> g) =>
-            Create(bindings =>
-                {
-                    var a = cli.Bind(bindings);
-                    return g(a, f(a).Bind(bindings));
-                },
-                () =>
-                {
-                    var a = cli.Inspect();
-                    return a.Concat(f(default).Inspect());
-                });
-
         public static ICli<V> Join<T, U, K, V>(this ICli<T> first, ICli<U> second,
             Func<T, K> unused1, Func<T, K> unused2,
             Func<T, U, V> resultSelector) =>
