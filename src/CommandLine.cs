@@ -398,7 +398,7 @@ namespace Arqs
 
                 var indent = false;
                 var prefix = new string(' ', OptionWidth + 2);
-                foreach (var line in GetLines(arg.Description()))
+                foreach (var line in GetLines(arg.Description().Trim()))
                 {
                     if (indent)
                         sb.Append(prefix);
